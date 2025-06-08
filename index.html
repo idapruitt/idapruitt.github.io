@@ -66,7 +66,7 @@
 </head>
 <body>
 
-  <h1>Click to Zoom, Drag to Pan</h1>
+  <h1>Click to Zoom and Drag to Pan</h1>
 
   <div class="viewer" id="viewer">
     <img id="mainImage" src="images/photo1.jpg" alt="Main Image" />
@@ -78,105 +78,118 @@
     <img src="images/photo3.jpg" onclick="loadImage('images/photo3.jpg')" />
   </div>
 
-  <script>
-    const viewer = document.getElementById('viewer');
-    const image = document.getElementById('mainImage');
+ <script>
+  const viewer = document.getElementById('viewer');
+  const image = document.getElementById('mainImage');
 
-    let scale = 1;
-    let translateX = 0;
-    let translateY = 0;
-    let isZoomed = false;
+  let scale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isZoomed = false;
 
-    let isDragging = false;
-    let dragThreshold = 5; // pixels
-    let dragStartedAt = { x: 0, y: 0 };
-    let startX = null;
-    let startY = null;
+  let isDragging = false;
+  let dragThreshold = 5;
+  let dragStartedAt = { x: 0, y: 0 };
+  let startX = null;
+  let startY = null;
 
-    viewer.addEventListener('mousedown', (e) => {
-      if (!isZoomed) return;
-      isDragging = false;
-      dragStartedAt = { x: e.clientX, y: e.clientY };
-      startX = e.clientX;
-      startY = e.clientY;
-    });
+  function clampTranslation() {
+    const viewerRect = viewer.getBoundingClientRect();
+    const imageWidth = image.naturalWidth * scale;
+    const imageHeight = image.naturalHeight * scale;
 
-    viewer.addEventListener('mousemove', (e) => {
-      if (!isZoomed || startX === null) return;
+    const maxTranslateX = 0;
+    const minTranslateX = viewerRect.width - imageWidth;
+    const maxTranslateY = 0;
+    const minTranslateY = viewerRect.height - imageHeight;
 
-      const dxTotal = e.clientX - dragStartedAt.x;
-      const dyTotal = e.clientY - dragStartedAt.y;
+    translateX = Math.min(maxTranslateX, Math.max(minTranslateX, translateX));
+    translateY = Math.min(maxTranslateY, Math.max(minTranslateY, translateY));
+  }
 
-      if (!isDragging) {
-        if (Math.abs(dxTotal) > dragThreshold || Math.abs(dyTotal) > dragThreshold) {
-          isDragging = true;
-        }
-      }
+  function applyTransform() {
+    clampTranslation();
+    image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+  }
 
-      if (isDragging) {
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        translateX += dx;
-        translateY += dy;
-        applyTransform();
-        startX = e.clientX;
-        startY = e.clientY;
-      }
-    });
+  viewer.addEventListener('mousedown', (e) => {
+    if (!isZoomed) return;
+    isDragging = false;
+    dragStartedAt = { x: e.clientX, y: e.clientY };
+    startX = e.clientX;
+    startY = e.clientY;
+  });
 
-    viewer.addEventListener('mouseup', () => {
-      startX = null;
-      startY = null;
-    });
+  viewer.addEventListener('mousemove', (e) => {
+    if (!isZoomed || startX === null) return;
 
-    viewer.addEventListener('mouseleave', () => {
-      startX = null;
-      startY = null;
-    });
+    const dxTotal = e.clientX - dragStartedAt.x;
+    const dyTotal = e.clientY - dragStartedAt.y;
 
-    viewer.addEventListener('click', (e) => {
-      if (isDragging) {
-        // Prevent zoom toggle after drag
-        isDragging = false;
-        return;
-      }
-
-      isZoomed = !isZoomed;
-      viewer.classList.toggle('zoomed', isZoomed);
-
-      if (isZoomed) {
-        scale = 2;
-        const rect = viewer.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
-        translateX = rect.width / 2 - offsetX * scale;
-        translateY = rect.height / 2 - offsetY * scale;
-      } else {
-        scale = 1;
-        translateX = 0;
-        translateY = 0;
-      }
-
-      applyTransform();
-    });
-
-    function applyTransform() {
-      image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    if (!isDragging && (Math.abs(dxTotal) > dragThreshold || Math.abs(dyTotal) > dragThreshold)) {
+      isDragging = true;
     }
 
-    function loadImage(src) {
-      image.src = src;
-      isZoomed = false;
+    if (isDragging) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      translateX += dx;
+      translateY += dy;
+      startX = e.clientX;
+      startY = e.clientY;
+      applyTransform();
+    }
+  });
+
+  viewer.addEventListener('mouseup', () => {
+    startX = null;
+    startY = null;
+  });
+
+  viewer.addEventListener('mouseleave', () => {
+    startX = null;
+    startY = null;
+  });
+
+  viewer.addEventListener('click', (e) => {
+    if (isDragging) {
+      isDragging = false;
+      return;
+    }
+
+    isZoomed = !isZoomed;
+    viewer.classList.toggle('zoomed', isZoomed);
+
+    if (isZoomed) {
+      scale = 2;
+      const rect = viewer.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      translateX = rect.width / 2 - offsetX * scale;
+      translateY = rect.height / 2 - offsetY * scale;
+    } else {
       scale = 1;
       translateX = 0;
       translateY = 0;
-      viewer.classList.remove('zoomed');
-      applyTransform();
     }
 
-    // Initialize transform on page load (fully zoomed out)
     applyTransform();
-  </script>
+  });
+
+  function loadImage(src) {
+    image.src = src;
+    isZoomed = false;
+    scale = 1;
+    translateX = 0;
+    translateY = 0;
+    viewer.classList.remove('zoomed');
+    applyTransform();
+  }
+
+  // Wait for image to load before applying initial transform
+  image.onload = applyTransform;
+</script>
+
 
 </body>
 </html>
