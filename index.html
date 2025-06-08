@@ -7,7 +7,7 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #000;
+      background-color: #888;
       font-family: sans-serif;
       user-select: none;
     }
@@ -15,14 +15,14 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #000;
+      background-color: #888;
     }
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #000;
+      background-color: #888;
       z-index: 10;
     }
     .thumbnails img {
@@ -39,7 +39,7 @@
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #000;
+      background-color: #888;
       overflow: hidden;
       cursor: zoom-in;
     }
@@ -87,6 +87,7 @@
 
     // Drag state
     let isDragging = false;
+    let hasDragged = false;
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
 
@@ -153,6 +154,7 @@
     viewer.addEventListener('mousedown', e => {
       if (!isZoomed) return;
       isDragging = true;
+      hasDragged = false;
       dragStart.x = e.clientX;
       dragStart.y = e.clientY;
       lastTranslate.x = translateX;
@@ -164,6 +166,7 @@
     // Mouse move: if dragging, pan image
     viewer.addEventListener('mousemove', e => {
       if (!isDragging) return;
+      hasDragged = true;
       const dx = e.clientX - dragStart.x;
       const dy = e.clientY - dragStart.y;
       translateX = lastTranslate.x + dx;
@@ -185,9 +188,9 @@
       }
     });
 
-    // Click toggles zoom in/out, only if not dragging
+    // Only toggle zoom if no drag happened
     viewer.addEventListener('click', e => {
-      if (isDragging) return; // prevent toggle on drag
+      if (hasDragged) return;
 
       const rect = viewer.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -199,7 +202,6 @@
       if (!isZoomed) {
         isZoomed = true;
         scale = Math.min(baseScale * 2, baseScale * maxScaleFactor);
-        // Center zoom on click point
         translateX = -imageOffsetX * (scale / baseScale - 1);
         translateY = -imageOffsetY * (scale / baseScale - 1);
         viewer.classList.add('zoomed');
@@ -222,21 +224,18 @@
       const cursorX = e.clientX - rect.left;
       const cursorY = e.clientY - rect.top;
 
-      // Calculate zoom direction
       const zoomStep = 0.1;
       let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
       newScale = Math.min(Math.max(newScale, baseScale), baseScale * maxScaleFactor);
 
-      if (newScale === scale) return; // no change
+      if (newScale === scale) return;
 
-      // Calculate image position under cursor before and after zoom
       const imgRelX = cursorX - ((rect.width - image.naturalWidth * scale) / 2 + translateX);
       const imgRelY = cursorY - ((rect.height - image.naturalHeight * scale) / 2 + translateY);
 
       const newImgRelX = imgRelX * (newScale / scale);
       const newImgRelY = imgRelY * (newScale / scale);
 
-      // Adjust translate so the point under the cursor stays fixed
       translateX -= (newImgRelX - imgRelX);
       translateY -= (newImgRelY - imgRelY);
 
@@ -247,7 +246,6 @@
       applyTransform();
     }, { passive: false });
 
-    // Image loaded or window resized -> fit image to viewer
     image.onload = fitImageToViewer;
     window.addEventListener('resize', fitImageToViewer);
   </script>
