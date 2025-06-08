@@ -1,61 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My First Website</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #000000;
-      color: #333;
-    }
-    header {
-      text-align: center;
-      padding: 20px;
-      background-color: #000000;
-      color: white;
-    }
-    main {
-      max-width: 800px;
-      margin: auto;
-    }
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      color: #888;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <h1>Welcome to My Website</h1>
-    <p>A simple HTML example</p>
-  </header>
-
-  <main>
-    <h2>About Me</h2>
-    <p>Hihihi.</p>
-
-    <h2>Projects</h2>
-    <ul>
-      <li>Personal sdfsdfsdftfolio</li>
-      <li>Blog Template</li>
-      <li>JavaScript Game</li>
-    </ul>
-  </main>
-
-  <footer>
-    &copy; 2025 My Webssdfite
-  </footer>
-
-
-//imageviewer
-<!DOCTYPE html>
-<html lang="en">
-<head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Image Viewer</title>
@@ -74,8 +19,6 @@
     .viewer img {
       max-width: 100%;
       max-height: 500px;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
     .thumbnails {
@@ -91,7 +34,6 @@
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
-      border-radius: 4px;
       transition: border 0.3s;
     }
 
@@ -102,4 +44,24 @@
 </head>
 <body>
 
-  <h1>Image Viewer</
+  <h1>Image Viewer</h1>
+
+  <div class="viewer">
+    <img id="mainImage" src="https://source.unsplash.com/800x500/?nature,water" alt="Main" />
+  </div>
+
+  <div class="thumbnails">
+    <img src="https://source.unsplash.com/100x70/?nature,water" onclick="showImage('https://source.unsplash.com/800x500/?nature,water')" />
+    <img src="https://source.unsplash.com/100x70/?nature,forest" onclick="showImage('https://source.unsplash.com/800x500/?nature,forest')" />
+    <img src="https://source.unsplash.com/100x70/?mountains" onclick="showImage('https://source.unsplash.com/800x500/?mountains')" />
+    <img src="https://source.unsplash.com/100x70/?sunset" onclick="showImage('https://source.unsplash.com/800x500/?sunset')" />
+  </div>
+
+  <script>
+    function showImage(src) {
+      document.getElementById('mainImage').src = src;
+    }
+  </script>
+
+</body>
+</html>
