@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fullscreen Zoom Image Viewer</title>
+  <title>Centered Zoom Image Viewer</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #000;
+      background-color: #888;
       font-family: sans-serif;
       user-select: none;
     }
@@ -15,14 +15,14 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #000;
+      background-color: #888;
     }
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #000;
+      background-color: #888;
       z-index: 10;
       transition: opacity 0.3s ease;
       user-select: none;
@@ -46,7 +46,7 @@
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #000;
+      background-color: #888;
       overflow: hidden;
       cursor: zoom-in;
     }
@@ -241,26 +241,20 @@
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
 
+      const imgX = (clickX - (viewer.clientWidth - image.naturalWidth * scale) / 2 - translateX) / scale;
+      const imgY = (clickY - (viewer.clientHeight - image.naturalHeight * scale) / 2 - translateY) / scale;
+
       if (!isZoomed) {
         isZoomed = true;
         scale = baseScale * clickZoomFactor;
 
-        const viewerWidth = rect.width;
-        const viewerHeight = rect.height;
-        const imgWidth = image.naturalWidth * scale;
-        const imgHeight = image.naturalHeight * scale;
+        const newOffsetX = clickX - imgX * scale;
+        const newOffsetY = clickY - imgY * scale;
 
-        const offsetX = (viewerWidth - imgWidth) / 2;
-        const offsetY = (viewerHeight - imgHeight) / 2;
-
-        const clickOffsetX = clickX - offsetX;
-        const clickOffsetY = clickY - offsetY;
-
-        translateX = (viewerWidth / 2 - clickX) + (clickOffsetX - imgWidth / 2);
-        translateY = (viewerHeight / 2 - clickY) + (clickOffsetY - imgHeight / 2);
+        translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
+        translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
 
         clampTranslation();
-
         viewer.classList.add('zoomed');
         thumbnails.classList.add('hidden');
       } else {
@@ -295,10 +289,8 @@
         thumbnails.classList.add('hidden');
       }
 
-      const viewerWidth = rect.width;
-      const viewerHeight = rect.height;
-      const offsetX = (viewerWidth - image.naturalWidth * scale) / 2 + translateX;
-      const offsetY = (viewerHeight - image.naturalHeight * scale) / 2 + translateY;
+      const offsetX = (viewer.clientWidth - image.naturalWidth * scale) / 2 + translateX;
+      const offsetY = (viewer.clientHeight - image.naturalHeight * scale) / 2 + translateY;
 
       const imgCoordX = (cursorX - offsetX) / scale;
       const imgCoordY = (cursorY - offsetY) / scale;
@@ -308,8 +300,8 @@
       const newOffsetX = cursorX - imgCoordX * scale;
       const newOffsetY = cursorY - imgCoordY * scale;
 
-      translateX = newOffsetX - (viewerWidth - image.naturalWidth * scale) / 2;
-      translateY = newOffsetY - (viewerHeight - image.naturalHeight * scale) / 2;
+      translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
+      translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
 
       applyTransform();
     });
