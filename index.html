@@ -7,7 +7,7 @@
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #888;
+      background-color: #000;
       font-family: sans-serif;
       user-select: none;
     }
@@ -15,14 +15,14 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #888;
+      background-color: #000;
     }
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #888;
+      background-color: #000;
       z-index: 10;
       transition: opacity 0.3s ease;
       user-select: none;
@@ -46,7 +46,7 @@
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #888;
+      background-color: #000;
       overflow: hidden;
       cursor: zoom-in;
     }
@@ -90,6 +90,9 @@
     let baseScale = 1;
     let scale = 1;
     const maxScaleFactor = 5;
+    const clickZoomFactor = 2.0;
+    const minScaleFactor = 1.6;
+
     let translateX = 0;
     let translateY = 0;
     let isZoomed = false;
@@ -99,10 +102,6 @@
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
 
-    // Minimum zoom factor for scroll zoom (120% of baseScale)
-    const minScaleFactor = 1.2;
-
-    // Preload images and store natural sizes
     const imagesData = [];
     let currentImageIndex = 0;
 
@@ -152,7 +151,6 @@
       const scaleY = viewerRect.height / ih;
 
       baseScale = Math.min(scaleX, scaleY);
-      // On load, start zoom at exactly baseScale (100%)
       scale = baseScale;
       translateX = 0;
       translateY = 0;
@@ -198,8 +196,6 @@
           setImage(i);
         }
       });
-      thumb.style.border = '2px solid transparent';
-      thumb.style.outline = 'none';
     });
 
     viewer.addEventListener('mousedown', e => {
@@ -224,13 +220,14 @@
       applyTransform();
     });
 
-    viewer.addEventListener('mouseup', e => {
+    viewer.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
         viewer.style.cursor = 'grab';
       }
     });
-    viewer.addEventListener('mouseleave', e => {
+
+    viewer.addEventListener('mouseleave', () => {
       if (isDragging) {
         isDragging = false;
         viewer.style.cursor = 'grab';
@@ -246,24 +243,21 @@
 
       if (!isZoomed) {
         isZoomed = true;
-        const viewerWidth = window.innerWidth;
-        const viewerHeight = window.innerHeight;
+        scale = baseScale * clickZoomFactor;
 
-        const scaleX = viewerWidth / image.naturalWidth;
-        const scaleY = viewerHeight / image.naturalHeight;
-        scale = Math.min(scaleX, scaleY);
+        const viewerWidth = rect.width;
+        const viewerHeight = rect.height;
+        const imgWidth = image.naturalWidth * scale;
+        const imgHeight = image.naturalHeight * scale;
 
-        const imgWidthScaled = image.naturalWidth * scale;
-        const imgHeightScaled = image.naturalHeight * scale;
-
-        const offsetX = (viewerWidth - imgWidthScaled) / 2;
-        const offsetY = (viewerHeight - imgHeightScaled) / 2;
+        const offsetX = (viewerWidth - imgWidth) / 2;
+        const offsetY = (viewerHeight - imgHeight) / 2;
 
         const clickOffsetX = clickX - offsetX;
         const clickOffsetY = clickY - offsetY;
 
-        translateX = (viewerWidth / 2 - clickX) + (clickOffsetX - imgWidthScaled / 2);
-        translateY = (viewerHeight / 2 - clickY) + (clickOffsetY - imgHeightScaled / 2);
+        translateX = (viewerWidth / 2 - clickX) + (clickOffsetX - imgWidth / 2);
+        translateY = (viewerHeight / 2 - clickY) + (clickOffsetY - imgHeight / 2);
 
         clampTranslation();
 
@@ -290,13 +284,11 @@
 
       const zoomStep = 0.1;
       let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
+      const minScale = baseScale * minScaleFactor;
 
-      // Clamp so zoom can't go below 120% of baseScale
-      newScale = Math.min(Math.max(newScale, baseScale * minScaleFactor), baseScale * maxScaleFactor);
-
+      newScale = Math.min(Math.max(newScale, minScale), baseScale * maxScaleFactor);
       if (newScale === scale) return;
 
-      // If zoom mode is not active, activate it on scroll zoom
       if (!isZoomed) {
         isZoomed = true;
         viewer.classList.add('zoomed');
@@ -322,9 +314,7 @@
       applyTransform();
     });
 
-    window.addEventListener('resize', () => {
-      fitImageToViewer();
-    });
+    window.addEventListener('resize', fitImageToViewer);
 
     preloadImages();
   </script>
