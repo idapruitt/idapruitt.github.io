@@ -19,35 +19,6 @@
       font-family: sans-serif;
     }
 
-    #loading-screen {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #111;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-    }
-
-    #progress-bar {
-      width: 60%;
-      height: 8px;
-      background: #444;
-      margin-top: 16px;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    #progress-bar-inner {
-      height: 100%;
-      width: 0%;
-      background: #ccc;
-      transition: width 0.3s ease;
-    }
-
     .viewer {
       position: relative;
       width: 100%;
@@ -98,13 +69,6 @@
   </style>
 </head>
 <body>
-  <div id="loading-screen">
-    <div>loading big paintings</div>
-    <div id="progress-bar">
-      <div id="progress-bar-inner"></div>
-    </div>
-  </div>
-
   <div class="thumbnails" id="thumbnails">
     <img class="thumbnail" src="images/img1.jpg" onclick="setImage(0)" />
     <img class="thumbnail" src="images/img2.jpg" onclick="setImage(1)" />
@@ -122,8 +86,6 @@
     const viewer = document.getElementById('viewer');
     const image = document.getElementById('main-image');
     const thumbnails = document.getElementById('thumbnails');
-    const loadingScreen = document.getElementById('loading-screen');
-    const progressBarInner = document.getElementById('progress-bar-inner');
 
     const images = [
       'images/img1.jpg',
@@ -134,7 +96,6 @@
       'images/img6.jpg'
     ];
 
-    let imagesData = [];
     let currentImageIndex = 0;
     let isZoomed = false;
     let scale = 1;
@@ -147,8 +108,8 @@
 
     function fitImageToViewer() {
       const viewerRect = viewer.getBoundingClientRect();
-      const img = imagesData[currentImageIndex];
-      if (!img) return;
+      const img = image;
+      if (!img.complete) return;
 
       const scaleX = viewerRect.width / img.naturalWidth;
       const scaleY = viewerRect.height / img.naturalHeight;
@@ -163,11 +124,8 @@
 
     function updateImageTransform() {
       const viewerRect = viewer.getBoundingClientRect();
-      const img = imagesData[currentImageIndex];
-      if (!img) return;
-
-      const imgWidth = img.naturalWidth * scale;
-      const imgHeight = img.naturalHeight * scale;
+      const imgWidth = image.naturalWidth * scale;
+      const imgHeight = image.naturalHeight * scale;
 
       const maxOffsetX = Math.max(0, (imgWidth - viewerRect.width) / 2);
       const maxOffsetY = Math.max(0, (imgHeight - viewerRect.height) / 2);
@@ -179,36 +137,19 @@
     }
 
     function setImage(index) {
-      if (!imagesData[index]) return;
       currentImageIndex = index;
+      const src = images[index];
 
-      const { src, naturalWidth, naturalHeight } = imagesData[index];
-
-      image.style.opacity = 0;
-      image.style.display = 'none';
-      image.style.pointerEvents = 'none';
-
-      const preloadImg = new Image();
-      preloadImg.src = src;
-
-      preloadImg.onload = () => {
-        image.src = src;
-        image.naturalWidth = naturalWidth;
-        image.naturalHeight = naturalHeight;
-
-        baseScale = 1;
-        scale = baseScale;
+      image.onload = () => {
+        isZoomed = false;
         translateX = 0;
         translateY = 0;
-        isZoomed = false;
-
-        fitImageToViewer();
-        image.style.display = 'block';
-        image.style.opacity = 1;
-        image.style.pointerEvents = '';
         viewer.classList.remove('zoomed');
         thumbnails.classList.remove('hidden');
+        fitImageToViewer();
       };
+
+      image.src = src;
     }
 
     viewer.addEventListener('mousedown', (e) => {
@@ -238,40 +179,44 @@
     });
 
     viewer.addEventListener('click', (e) => {
+      const rect = viewer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left - rect.width / 2;
+      const clickY = e.clientY - rect.top - rect.height / 2;
+
       if (!isZoomed) {
         isZoomed = true;
         scale = 2;
-        const rect = viewer.getBoundingClientRect();
-        const clickX = e.clientX - rect.left - rect.width / 2;
-        const clickY = e.clientY - rect.top - rect.height / 2;
         translateX = clickX;
         translateY = clickY;
-
-        thumbnails.classList.add('hidden');
         viewer.classList.add('zoomed');
+        thumbnails.classList.add('hidden');
       } else {
         isZoomed = false;
         scale = baseScale;
         translateX = 0;
         translateY = 0;
-        thumbnails.classList.remove('hidden');
         viewer.classList.remove('zoomed');
+        thumbnails.classList.remove('hidden');
       }
+
       updateImageTransform();
     });
 
     viewer.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (!isZoomed) {
-        isZoomed = true;
-        scale = 2;
-        viewer.classList.add('zoomed');
-        thumbnails.classList.add('hidden');
-      }
 
       const rect = viewer.getBoundingClientRect();
       const cx = e.clientX - rect.left - rect.width / 2;
       const cy = e.clientY - rect.top - rect.height / 2;
+
+      if (!isZoomed) {
+        isZoomed = true;
+        scale = 2;
+        translateX = cx;
+        translateY = cy;
+        viewer.classList.add('zoomed');
+        thumbnails.classList.add('hidden');
+      }
 
       const prevScale = scale;
       scale += e.deltaY * -0.001;
@@ -283,26 +228,8 @@
       updateImageTransform();
     }, { passive: false });
 
-    function preloadImages(callback) {
-      let loaded = 0;
-      images.forEach((src, i) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesData[i] = img;
-          loaded++;
-          progressBarInner.style.width = `${(loaded / images.length) * 100}%`;
-          if (loaded === images.length) callback();
-        };
-      });
-    }
-
-    preloadImages(() => {
-      loadingScreen.style.display = 'none';
-      setImage(0);
-    });
-
     window.addEventListener('resize', fitImageToViewer);
+    setImage(0);
   </script>
 </body>
 </html>
