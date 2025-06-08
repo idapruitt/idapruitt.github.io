@@ -11,43 +11,13 @@
       font-family: sans-serif;
     }
 
-    /* Loading Overlay */
-    #loadingScreen {
-      position: fixed;
-      inset: 0;
-      background: black;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-    #loadingMessage {
-      margin-bottom: 20px;
-      font-size: 1.2em;
-      letter-spacing: 0.5px;
-    }
-    #progressBarContainer {
-      width: 300px;
-      height: 8px;
-      background: #333;
-      border-radius: 4px;
-      overflow: hidden;
-    }
-    #progressBar {
-      height: 100%;
-      width: 0%;
-      background: white;
-      transition: width 0.3s ease;
-    }
-
     .container {
       display: flex;
       flex-direction: column;
       height: 100%;
       background-color: #000;
     }
+
     .thumbnails {
       display: flex;
       justify-content: center;
@@ -57,6 +27,7 @@
       z-index: 10;
       transition: opacity 0.3s ease;
     }
+
     .thumbnails.hidden {
       opacity: 0;
       pointer-events: none;
@@ -65,6 +36,7 @@
       margin: 0;
       overflow: hidden;
     }
+
     .thumbnails img {
       width: 100px;
       height: 70px;
@@ -81,12 +53,15 @@
       overflow: hidden;
       cursor: zoom-in;
     }
+
     .viewer.zoomed {
       cursor: grab;
     }
+
     .viewer.zoomed:active {
       cursor: grabbing;
     }
+
     .viewer img {
       position: absolute;
       top: 0; left: 0;
@@ -101,15 +76,6 @@
   </style>
 </head>
 <body>
-  <!-- Loading screen -->
-  <div id="loadingScreen">
-    <div id="loadingMessage">Loading big paintings</div>
-    <div id="progressBarContainer">
-      <div id="progressBar"></div>
-    </div>
-  </div>
-
-  <!-- Main viewer -->
   <div class="container">
     <div class="thumbnails" id="thumbnails">
       <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="1" />
@@ -129,9 +95,6 @@
     const image = document.getElementById('mainImage');
     const thumbnails = document.getElementById('thumbnails');
     const thumbnailImgs = thumbnails.querySelectorAll('img');
-
-    const loadingScreen = document.getElementById('loadingScreen');
-    const progressBar = document.getElementById('progressBar');
 
     let baseScale = 1;
     let scale = 1;
@@ -197,7 +160,7 @@
     function setImage(index) {
       if (!imagesData[index]) return;
       currentImageIndex = index;
-      const { src, naturalWidth, naturalHeight } = imagesData[index];
+      const { src } = imagesData[index];
 
       image.style.opacity = 0;
       image.style.pointerEvents = 'none';
@@ -208,11 +171,9 @@
           image.style.display = 'block';
           image.style.opacity = 1;
           image.style.pointerEvents = '';
-          image.naturalWidth = naturalWidth;
-          image.naturalHeight = naturalHeight;
           fitImageToViewer();
         };
-      }, 200);
+      }, 100);
 
       isZoomed = false;
       scale = baseScale;
@@ -223,6 +184,18 @@
     }
 
     thumbnailImgs.forEach((thumb, i) => {
+      const src = thumb.dataset.src;
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        imagesData[i] = {
+          src,
+          naturalWidth: img.naturalWidth,
+          naturalHeight: img.naturalHeight
+        };
+        if (i === 0) setImage(0);
+      };
+
       thumb.addEventListener('click', () => {
         if (currentImageIndex !== i) {
           setImage(i);
@@ -339,34 +312,6 @@
     });
 
     window.addEventListener('resize', fitImageToViewer);
-
-    function preloadImages() {
-      const total = thumbnailImgs.length;
-      let loaded = 0;
-
-      thumbnailImgs.forEach((thumb, idx) => {
-        const src = thumb.dataset.src;
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesData[idx] = {
-            src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight
-          };
-          loaded++;
-          progressBar.style.width = `${(loaded / total) * 100}%`;
-          if (loaded === total) {
-            setTimeout(() => {
-              loadingScreen.style.display = 'none';
-              setImage(0);
-            }, 300);
-          }
-        };
-      });
-    }
-
-    preloadImages();
   </script>
 </body>
 </html>
