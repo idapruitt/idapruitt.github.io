@@ -6,8 +6,11 @@
   <title>Image Viewer</title>
   <style>
     html, body {
-      margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #888;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
       font-family: sans-serif;
     }
 
@@ -15,17 +18,19 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #888;
+      background-color: #000;
     }
+
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #888;
+      background-color: #000;
       z-index: 10;
       transition: opacity 0.3s ease;
     }
+
     .thumbnails.hidden {
       opacity: 0;
       pointer-events: none;
@@ -34,6 +39,7 @@
       margin: 0;
       overflow: hidden;
     }
+
     .thumbnails img {
       width: 100px;
       height: 70px;
@@ -46,19 +52,23 @@
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #888;
+      background-color: #000;
       overflow: hidden;
       cursor: zoom-in;
     }
+
     .viewer.zoomed {
       cursor: grab;
     }
+
     .viewer.zoomed:active {
       cursor: grabbing;
     }
+
     .viewer img {
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       transform-origin: top left;
       pointer-events: none;
       max-width: none;
@@ -80,7 +90,7 @@
       <img src="images/photo6.jpg" data-src="images/photo6.jpg" alt="6" />
     </div>
     <div class="viewer" id="viewer">
-      <img id="mainImage" alt="Main View" />
+      <img id="mainImage" src="" alt="Main View" />
     </div>
   </div>
 
@@ -154,20 +164,22 @@
     function setImage(index) {
       if (!imagesData[index]) return;
       currentImageIndex = index;
-      const { src } = imagesData[index];
+      const { src, naturalWidth, naturalHeight } = imagesData[index];
 
-      const tempImage = new Image();
-      tempImage.src = src;
-      tempImage.onload = () => {
-        image.style.opacity = 0;
-        image.style.pointerEvents = 'none';
+      image.style.opacity = 0;
+      image.style.pointerEvents = 'none';
+      image.style.display = 'none';
+
+      const tempImg = new Image();
+      tempImg.src = src;
+      tempImg.onload = () => {
         image.src = src;
-
-        requestAnimationFrame(() => {
-          image.style.opacity = 1;
-          image.style.pointerEvents = '';
-          fitImageToViewer();
-        });
+        image.naturalWidth = naturalWidth;
+        image.naturalHeight = naturalHeight;
+        fitImageToViewer();
+        image.style.display = 'block';
+        image.style.opacity = 1;
+        image.style.pointerEvents = '';
       };
 
       isZoomed = false;
@@ -307,7 +319,9 @@
             naturalWidth: img.naturalWidth,
             naturalHeight: img.naturalHeight
           };
-          if (idx === 0) setImage(0);
+          if (idx === 0) {
+            setImage(0); // Show first image when loaded
+          }
         };
       });
     }
