@@ -2,84 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image Viewer with Drag, Click Zoom & Wheel Zoom</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background-color: #000;
       font-family: sans-serif;
-      background-color: #000; /* Full black background */
+      user-select: none;
     }
-
     .container {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #000; /* Ensures container is black */
+      background-color: #000;
     }
-
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #000; /* Thumbnails background black */
+      background-color: #000;
       z-index: 10;
     }
-
     .thumbnails img {
       width: 100px;
       height: 70px;
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
-      transition: border 0.3s;
+      transition: border-color 0.3s;
     }
-
     .thumbnails img:hover {
       border-color: #4CAF50;
     }
-
     .viewer {
       position: relative;
       flex: 1;
       background-color: #000;
       overflow: hidden;
       cursor: zoom-in;
-      user-select: none;
     }
-
     .viewer.zoomed {
       cursor: grab;
     }
-
     .viewer.zoomed:active {
       cursor: grabbing;
     }
-
     .viewer img {
       position: absolute;
-      top: 0;
-      left: 0;
+      top: 0; left: 0;
       transform-origin: top left;
-      transition: transform 0.2s ease;
-      user-select: none;
       pointer-events: none;
       max-width: none;
-      opacity: 0; /* Start fully transparent */
+      display: none; /* Hidden initially until loaded & transformed */
+      will-change: transform;
+      user-select: none;
     }
   </style>
 </head>
 <body>
-
   <div class="container">
     <div class="thumbnails">
-      <img src="images/photo1.jpg" onclick="loadImage('images/photo1.jpg')" />
-      <img src="images/photo2.jpg" onclick="loadImage('images/photo2.jpg')" />
-      <img src="images/photo3.jpg" onclick="loadImage('images/photo3.jpg')" />
+      <img src="images/photo1.jpg" onclick="loadImage('images/photo1.jpg')" alt="Thumb 1" />
+      <img src="images/photo2.jpg" onclick="loadImage('images/photo2.jpg')" alt="Thumb 2" />
+      <img src="images/photo3.jpg" onclick="loadImage('images/photo3.jpg')" alt="Thumb 3" />
     </div>
     <div class="viewer" id="viewer">
       <img id="mainImage" src="images/photo1.jpg" alt="Main Image" />
@@ -90,31 +77,33 @@
     const viewer = document.getElementById('viewer');
     const image = document.getElementById('mainImage');
 
-    let scale = 1;
-    let baseScale = 1;
-    let zoomFactor = 2;
+    let baseScale = 1;      // scale to fit viewer on load/resize
+    let scale = 1;          // current zoom scale
+    const maxScaleFactor = 5; // max zoom is 5x base
+    const minScaleFactor = 1; // min zoom is base scale (fully zoomed out)
     let translateX = 0;
     let translateY = 0;
     let isZoomed = false;
 
+    // Drag state
     let isDragging = false;
-    let dragThreshold = 5;
-    let dragStartedAt = { x: 0, y: 0 };
-    let startX = null;
-    let startY = null;
+    let dragStart = { x: 0, y: 0 };
+    let lastTranslate = { x: 0, y: 0 };
 
+    // Clamp translation so image can't be panned off edges
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
       const imgWidth = image.naturalWidth * scale;
       const imgHeight = image.naturalHeight * scale;
 
-      const maxOffsetX = Math.max(0, (imgWidth - viewerRect.width) / 2);
-      const maxOffsetY = Math.max(0, (imgHeight - viewerRect.height) / 2);
+      const maxTranslateX = Math.max(0, (imgWidth - viewerRect.width) / 2);
+      const maxTranslateY = Math.max(0, (imgHeight - viewerRect.height) / 2);
 
-      translateX = Math.max(-maxOffsetX, Math.min(maxOffsetX, translateX));
-      translateY = Math.max(-maxOffsetY, Math.min(maxOffsetY, translateY));
+      translateX = Math.min(maxTranslateX, Math.max(-maxTranslateX, translateX));
+      translateY = Math.min(maxTranslateY, Math.max(-maxTranslateY, translateY));
     }
 
+    // Apply transform with centering
     function applyTransform() {
       clampTranslation();
       const viewerRect = viewer.getBoundingClientRect();
@@ -122,14 +111,15 @@
       const offsetY = (viewerRect.height - image.naturalHeight * scale) / 2;
       const x = offsetX + translateX;
       const y = offsetY + translateY;
-
       image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
     }
 
+    // Fit image to viewer on load & resize
     function fitImageToViewer() {
       const viewerRect = viewer.getBoundingClientRect();
       const iw = image.naturalWidth;
       const ih = image.naturalHeight;
+      if (iw === 0 || ih === 0) return; // image not loaded yet
 
       const scaleX = viewerRect.width / iw;
       const scaleY = viewerRect.height / ih;
@@ -138,55 +128,66 @@
       scale = baseScale;
       translateX = 0;
       translateY = 0;
+      isZoomed = false;
+      viewer.classList.remove('zoomed');
 
       applyTransform();
-      image.style.opacity = '1'; // Reveal the image once ready
+
+      // Show image only after initial transform applied
+      image.style.display = 'block';
     }
 
-    viewer.addEventListener('mousedown', (e) => {
+    // Load new image from thumbnail click
+    function loadImage(src) {
+      image.style.display = 'none';
+      image.src = src;
+      // Reset zoom/pan state on new image
+      translateX = 0;
+      translateY = 0;
+      scale = baseScale;
+      isZoomed = false;
+      viewer.classList.remove('zoomed');
+    }
+
+    // Mouse down: start dragging if zoomed in
+    viewer.addEventListener('mousedown', e => {
       if (!isZoomed) return;
-      isDragging = false;
-      dragStartedAt = { x: e.clientX, y: e.clientY };
-      startX = e.clientX;
-      startY = e.clientY;
+      isDragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      lastTranslate.x = translateX;
+      lastTranslate.y = translateY;
+      viewer.style.cursor = 'grabbing';
+      e.preventDefault();
     });
 
-    viewer.addEventListener('mousemove', (e) => {
-      if (!isZoomed || startX === null) return;
-
-      const dxTotal = e.clientX - dragStartedAt.x;
-      const dyTotal = e.clientY - dragStartedAt.y;
-
-      if (!isDragging && (Math.abs(dxTotal) > dragThreshold || Math.abs(dyTotal) > dragThreshold)) {
-        isDragging = true;
-      }
-
-      if (isDragging) {
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        translateX += dx;
-        translateY += dy;
-        startX = e.clientX;
-        startY = e.clientY;
-        applyTransform();
-      }
+    // Mouse move: if dragging, pan image
+    viewer.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      translateX = lastTranslate.x + dx;
+      translateY = lastTranslate.y + dy;
+      applyTransform();
     });
 
-    viewer.addEventListener('mouseup', () => {
-      startX = null;
-      startY = null;
-    });
-
-    viewer.addEventListener('mouseleave', () => {
-      startX = null;
-      startY = null;
-    });
-
-    viewer.addEventListener('click', (e) => {
+    // Mouse up & leave: stop dragging
+    viewer.addEventListener('mouseup', e => {
       if (isDragging) {
         isDragging = false;
-        return;
+        viewer.style.cursor = 'grab';
       }
+    });
+    viewer.addEventListener('mouseleave', e => {
+      if (isDragging) {
+        isDragging = false;
+        viewer.style.cursor = 'grab';
+      }
+    });
+
+    // Click toggles zoom in/out, only if not dragging
+    viewer.addEventListener('click', e => {
+      if (isDragging) return; // prevent toggle on drag
 
       const rect = viewer.getBoundingClientRect();
       const clickX = e.clientX - rect.left;
@@ -195,32 +196,60 @@
       const imageOffsetX = (clickX - rect.width / 2);
       const imageOffsetY = (clickY - rect.height / 2);
 
-      isZoomed = !isZoomed;
-      viewer.classList.toggle('zoomed', isZoomed);
-
-      if (isZoomed) {
-        scale = baseScale * zoomFactor;
-        translateX = -imageOffsetX * (zoomFactor - 1);
-        translateY = -imageOffsetY * (zoomFactor - 1);
+      if (!isZoomed) {
+        isZoomed = true;
+        scale = Math.min(baseScale * 2, baseScale * maxScaleFactor);
+        // Center zoom on click point
+        translateX = -imageOffsetX * (scale / baseScale - 1);
+        translateY = -imageOffsetY * (scale / baseScale - 1);
+        viewer.classList.add('zoomed');
       } else {
+        isZoomed = false;
         scale = baseScale;
         translateX = 0;
         translateY = 0;
+        viewer.classList.remove('zoomed');
       }
-
       applyTransform();
     });
 
-    function loadImage(src) {
-      image.style.opacity = '0'; // Hide during transition
-      image.src = src;
-      isZoomed = false;
-      viewer.classList.remove('zoomed');
-    }
+    // Wheel zooming centered on cursor
+    viewer.addEventListener('wheel', e => {
+      e.preventDefault();
+      if (!image.naturalWidth || !image.naturalHeight) return;
 
+      const rect = viewer.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      // Calculate zoom direction
+      const zoomStep = 0.1;
+      let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
+      newScale = Math.min(Math.max(newScale, baseScale), baseScale * maxScaleFactor);
+
+      if (newScale === scale) return; // no change
+
+      // Calculate image position under cursor before and after zoom
+      const imgRelX = cursorX - ((rect.width - image.naturalWidth * scale) / 2 + translateX);
+      const imgRelY = cursorY - ((rect.height - image.naturalHeight * scale) / 2 + translateY);
+
+      const newImgRelX = imgRelX * (newScale / scale);
+      const newImgRelY = imgRelY * (newScale / scale);
+
+      // Adjust translate so the point under the cursor stays fixed
+      translateX -= (newImgRelX - imgRelX);
+      translateY -= (newImgRelY - imgRelY);
+
+      scale = newScale;
+      isZoomed = scale > baseScale;
+      viewer.classList.toggle('zoomed', isZoomed);
+
+      applyTransform();
+    }, { passive: false });
+
+    // Image loaded or window resized -> fit image to viewer
     image.onload = fitImageToViewer;
     window.addEventListener('resize', fitImageToViewer);
   </script>
-
 </body>
 </html>
