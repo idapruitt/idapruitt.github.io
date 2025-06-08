@@ -5,189 +5,288 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Image Viewer</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background-color: #000;
+      font-family: sans-serif;
     }
 
-    body, html {
-      width: 100%;
-      height: 100%;
+    /* Loading Overlay */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: black;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #loadingMessage {
+      margin-bottom: 20px;
+      font-size: 1.2em;
+      letter-spacing: 0.5px;
+    }
+    #progressBarContainer {
+      width: 300px;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
       overflow: hidden;
-      background-color: #888;
-      font-family: sans-serif;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: white;
+      transition: width 0.3s ease;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background-color: #000;
+    }
+    .thumbnails {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      background-color: #000;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    .thumbnails.hidden {
+      opacity: 0;
+      pointer-events: none;
+      height: 0;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+    }
+    .thumbnails img {
+      width: 100px;
+      height: 70px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      outline: none;
     }
 
     .viewer {
       position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #888;
-      transition: background-color 0.3s ease;
-    }
-
-    .viewer.zoomed {
+      flex: 1;
       background-color: #000;
+      overflow: hidden;
+      cursor: zoom-in;
     }
-
+    .viewer.zoomed {
+      cursor: grab;
+    }
+    .viewer.zoomed:active {
+      cursor: grabbing;
+    }
     .viewer img {
       position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      user-select: none;
-      cursor: grab;
+      top: 0; left: 0;
+      transform-origin: top left;
+      pointer-events: none;
       max-width: none;
-      max-height: none;
-      image-rendering: auto;
-    }
-
-    .thumbnails {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 8px;
-      z-index: 2;
-    }
-
-    .thumbnail {
-      width: 60px;
-      height: 40px;
-      object-fit: cover;
-      cursor: pointer;
-      border: none;
-      background: none;
-    }
-
-    .thumbnails.hidden {
       display: none;
+      will-change: transform;
+      user-select: none;
+      transition: opacity 0.2s ease;
     }
   </style>
 </head>
 <body>
-  <div class="thumbnails" id="thumbnails">
-    <img class="thumbnail" src="images/img1.jpg" onclick="setImage(0)" />
-    <img class="thumbnail" src="images/img2.jpg" onclick="setImage(1)" />
-    <img class="thumbnail" src="images/img3.jpg" onclick="setImage(2)" />
-    <img class="thumbnail" src="images/img4.jpg" onclick="setImage(3)" />
-    <img class="thumbnail" src="images/img5.jpg" onclick="setImage(4)" />
-    <img class="thumbnail" src="images/img6.jpg" onclick="setImage(5)" />
+  <!-- Loading screen -->
+  <div id="loadingScreen">
+    <div id="loadingMessage">Loading big paintings</div>
+    <div id="progressBarContainer">
+      <div id="progressBar"></div>
+    </div>
   </div>
 
-  <div class="viewer" id="viewer">
-    <img id="main-image" />
+  <!-- Main viewer -->
+  <div class="container">
+    <div class="thumbnails" id="thumbnails">
+      <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="1" />
+      <img src="images/photo2.jpg" data-src="images/photo2.jpg" alt="2" />
+      <img src="images/photo3.jpg" data-src="images/photo3.jpg" alt="3" />
+      <img src="images/photo4.jpg" data-src="images/photo4.jpg" alt="4" />
+      <img src="images/photo5.jpg" data-src="images/photo5.jpg" alt="5" />
+      <img src="images/photo6.jpg" data-src="images/photo6.jpg" alt="6" />
+    </div>
+    <div class="viewer" id="viewer">
+      <img id="mainImage" src="" alt="Main View" />
+    </div>
   </div>
 
   <script>
     const viewer = document.getElementById('viewer');
-    const image = document.getElementById('main-image');
+    const image = document.getElementById('mainImage');
     const thumbnails = document.getElementById('thumbnails');
+    const thumbnailImgs = thumbnails.querySelectorAll('img');
 
-    const images = [
-      'images/img1.jpg',
-      'images/img2.jpg',
-      'images/img3.jpg',
-      'images/img4.jpg',
-      'images/img5.jpg',
-      'images/img6.jpg'
-    ];
+    const loadingScreen = document.getElementById('loadingScreen');
+    const progressBar = document.getElementById('progressBar');
 
-    let currentImageIndex = 0;
-    let isZoomed = false;
-    let scale = 1;
     let baseScale = 1;
+    let scale = 1;
+    const clickZoomFactor = 2.0;
+    const minScaleFactor = 1.6;
+    const maxScaleFactor = 10;
+
     let translateX = 0;
     let translateY = 0;
-    let startX = 0;
-    let startY = 0;
-    let dragging = false;
+    let isZoomed = false;
 
-    function fitImageToViewer() {
-      const viewerRect = viewer.getBoundingClientRect();
-      const img = image;
-      if (!img.complete) return;
+    let isDragging = false;
+    let hasDragged = false;
+    let dragStart = { x: 0, y: 0 };
+    let lastTranslate = { x: 0, y: 0 };
 
-      const scaleX = viewerRect.width / img.naturalWidth;
-      const scaleY = viewerRect.height / img.naturalHeight;
-      baseScale = Math.min(scaleX, scaleY, 1);
-      scale = baseScale;
+    const imagesData = [];
+    let currentImageIndex = 0;
 
-      translateX = 0;
-      translateY = 0;
-
-      updateImageTransform();
-    }
-
-    function updateImageTransform() {
+    function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
       const imgWidth = image.naturalWidth * scale;
       const imgHeight = image.naturalHeight * scale;
 
-      const maxOffsetX = Math.max(0, (imgWidth - viewerRect.width) / 2);
-      const maxOffsetY = Math.max(0, (imgHeight - viewerRect.height) / 2);
+      const maxTranslateX = Math.max(0, (imgWidth - viewerRect.width) / 2);
+      const maxTranslateY = Math.max(0, (imgHeight - viewerRect.height) / 2);
 
-      translateX = Math.min(maxOffsetX, Math.max(-maxOffsetX, translateX));
-      translateY = Math.min(maxOffsetY, Math.max(-maxOffsetY, translateY));
+      translateX = Math.min(maxTranslateX, Math.max(-maxTranslateX, translateX));
+      translateY = Math.min(maxTranslateY, Math.max(-maxTranslateY, translateY));
+    }
 
-      image.style.transform = `translate(calc(-50% + ${translateX}px), calc(-50% + ${translateY}px)) scale(${scale})`;
+    function applyTransform() {
+      clampTranslation();
+      const viewerRect = viewer.getBoundingClientRect();
+      const offsetX = (viewerRect.width - image.naturalWidth * scale) / 2;
+      const offsetY = (viewerRect.height - image.naturalHeight * scale) / 2;
+      const x = offsetX + translateX;
+      const y = offsetY + translateY;
+      image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+    }
+
+    function fitImageToViewer() {
+      const viewerRect = viewer.getBoundingClientRect();
+      const iw = image.naturalWidth;
+      const ih = image.naturalHeight;
+      if (iw === 0 || ih === 0) return;
+
+      const scaleX = viewerRect.width / iw;
+      const scaleY = viewerRect.height / ih;
+
+      baseScale = Math.min(scaleX, scaleY);
+      scale = baseScale;
+      translateX = 0;
+      translateY = 0;
+      isZoomed = false;
+      viewer.classList.remove('zoomed');
+      thumbnails.classList.remove('hidden');
+
+      applyTransform();
+      image.style.display = 'block';
     }
 
     function setImage(index) {
+      if (!imagesData[index]) return;
       currentImageIndex = index;
-      const src = images[index];
+      const { src, naturalWidth, naturalHeight } = imagesData[index];
 
-      image.onload = () => {
-        isZoomed = false;
-        translateX = 0;
-        translateY = 0;
-        viewer.classList.remove('zoomed');
-        thumbnails.classList.remove('hidden');
-        fitImageToViewer();
-      };
+      image.style.opacity = 0;
+      image.style.pointerEvents = 'none';
 
-      image.src = src;
+      setTimeout(() => {
+        image.src = src;
+        image.onload = () => {
+          image.style.display = 'block';
+          image.style.opacity = 1;
+          image.style.pointerEvents = '';
+          image.naturalWidth = naturalWidth;
+          image.naturalHeight = naturalHeight;
+          fitImageToViewer();
+        };
+      }, 200);
+
+      isZoomed = false;
+      scale = baseScale;
+      translateX = 0;
+      translateY = 0;
+      viewer.classList.remove('zoomed');
+      thumbnails.classList.remove('hidden');
     }
 
-    viewer.addEventListener('mousedown', (e) => {
-      dragging = true;
-      startX = e.clientX;
-      startY = e.clientY;
+    thumbnailImgs.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => {
+        if (currentImageIndex !== i) {
+          setImage(i);
+        }
+      });
     });
 
-    viewer.addEventListener('mousemove', (e) => {
-      if (!dragging || !isZoomed) return;
+    viewer.addEventListener('mousedown', e => {
+      if (!isZoomed) return;
+      isDragging = true;
+      hasDragged = false;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+      lastTranslate.x = translateX;
+      lastTranslate.y = translateY;
+      viewer.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
 
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      translateX += dx;
-      translateY += dy;
-      startX = e.clientX;
-      startY = e.clientY;
-      updateImageTransform();
+    viewer.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      hasDragged = true;
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      translateX = lastTranslate.x + dx;
+      translateY = lastTranslate.y + dy;
+      applyTransform();
     });
 
     viewer.addEventListener('mouseup', () => {
-      dragging = false;
+      if (isDragging) {
+        isDragging = false;
+        viewer.style.cursor = 'grab';
+      }
     });
 
     viewer.addEventListener('mouseleave', () => {
-      dragging = false;
+      if (isDragging) {
+        isDragging = false;
+        viewer.style.cursor = 'grab';
+      }
     });
 
-    viewer.addEventListener('click', (e) => {
+    viewer.addEventListener('click', e => {
+      if (hasDragged) return;
+
       const rect = viewer.getBoundingClientRect();
-      const clickX = e.clientX - rect.left - rect.width / 2;
-      const clickY = e.clientY - rect.top - rect.height / 2;
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const imgX = (clickX - (viewer.clientWidth - image.naturalWidth * scale) / 2 - translateX) / scale;
+      const imgY = (clickY - (viewer.clientHeight - image.naturalHeight * scale) / 2 - translateY) / scale;
 
       if (!isZoomed) {
         isZoomed = true;
-        scale = 2;
-        translateX = clickX;
-        translateY = clickY;
+        scale = baseScale * clickZoomFactor;
+
+        const newOffsetX = clickX - imgX * scale;
+        const newOffsetY = clickY - imgY * scale;
+
+        translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
+        translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
+
+        clampTranslation();
         viewer.classList.add('zoomed');
         thumbnails.classList.add('hidden');
       } else {
@@ -198,38 +297,76 @@
         viewer.classList.remove('zoomed');
         thumbnails.classList.remove('hidden');
       }
-
-      updateImageTransform();
+      applyTransform();
     });
 
-    viewer.addEventListener('wheel', (e) => {
+    viewer.addEventListener('wheel', e => {
       e.preventDefault();
+      if (!image.naturalWidth || !image.naturalHeight) return;
 
       const rect = viewer.getBoundingClientRect();
-      const cx = e.clientX - rect.left - rect.width / 2;
-      const cy = e.clientY - rect.top - rect.height / 2;
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+
+      const zoomStep = 0.1;
+      let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
+      const minScale = baseScale * minScaleFactor;
+
+      newScale = Math.min(Math.max(newScale, minScale), baseScale * maxScaleFactor);
+      if (newScale === scale) return;
 
       if (!isZoomed) {
         isZoomed = true;
-        scale = 2;
-        translateX = cx;
-        translateY = cy;
         viewer.classList.add('zoomed');
         thumbnails.classList.add('hidden');
       }
 
-      const prevScale = scale;
-      scale += e.deltaY * -0.001;
-      scale = Math.min(Math.max(1.6, scale), 10);
+      const offsetX = (viewer.clientWidth - image.naturalWidth * scale) / 2 + translateX;
+      const offsetY = (viewer.clientHeight - image.naturalHeight * scale) / 2 + translateY;
 
-      translateX += cx * (scale - prevScale);
-      translateY += cy * (scale - prevScale);
+      const imgCoordX = (cursorX - offsetX) / scale;
+      const imgCoordY = (cursorY - offsetY) / scale;
 
-      updateImageTransform();
-    }, { passive: false });
+      scale = newScale;
+
+      const newOffsetX = cursorX - imgCoordX * scale;
+      const newOffsetY = cursorY - imgCoordY * scale;
+
+      translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
+      translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
+
+      applyTransform();
+    });
 
     window.addEventListener('resize', fitImageToViewer);
-    setImage(0);
+
+    function preloadImages() {
+      const total = thumbnailImgs.length;
+      let loaded = 0;
+
+      thumbnailImgs.forEach((thumb, idx) => {
+        const src = thumb.dataset.src;
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          imagesData[idx] = {
+            src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight
+          };
+          loaded++;
+          progressBar.style.width = `${(loaded / total) * 100}%`;
+          if (loaded === total) {
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+              setImage(0);
+            }, 300);
+          }
+        };
+      });
+    }
+
+    preloadImages();
   </script>
 </body>
 </html>
