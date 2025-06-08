@@ -51,5 +51,75 @@
     &copy; 2025 My Website
   </footer>
 
+
+//imageviewer
+
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image Viewer</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f0f0f0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .viewer {
+      margin-bottom: 20px;
+    }
+
+    .viewer img {
+      max-width: 100%;
+      max-height: 500px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .thumbnails {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .thumbnails img {
+      width: 100px;
+      height: 70px;
+      object-fit: cover;
+      cursor: pointer;
+      border: 2px solid transparent;
+      border-radius: 4px;
+      transition: border 0.3s;
+    }
+
+    .thumbnails img:hover {
+      border-color: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Image Viewer</h1>
+  <div class="viewer">
+    <img id="mainImage" src="https://placekitten.com/800/500" alt="Main" />
+  </div>
+
+  <div class="thumbnails">
+    <img src="https://placekitten.com/800/500" alt="Thumb 1" onclick="showImage(this.src)" />
+    <img src="https://placekitten.com/801/500" alt="Thumb 2" onclick="showImage(this.src)" />
+    <img src="https://placekitten.com/802/500" alt="Thumb 3" onclick="showImage(this.src)" />
+    <img src="https://placekitten.com/803/500" alt="Thumb 4" onclick="showImage(this.src)" />
+  </div>
+
+  <script>
+    function showImage(src) {
+      document.getElementById('mainImage').src = src;
+    }
+  </script>
+
+
 </body>
 </html>
