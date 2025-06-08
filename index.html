@@ -11,13 +11,14 @@
       height: 100%;
       overflow: hidden;
       font-family: sans-serif;
-      background-color: #000; /* Black background */
+      background-color: #000; /* Full black background */
     }
 
     .container {
       display: flex;
       flex-direction: column;
       height: 100%;
+      background-color: #000; /* Ensures container is black */
     }
 
     .thumbnails {
@@ -25,8 +26,7 @@
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background: #111;
-      border-bottom: 1px solid #333;
+      background-color: #000; /* Thumbnails background black */
       z-index: 10;
     }
 
@@ -46,7 +46,7 @@
     .viewer {
       position: relative;
       flex: 1;
-      background: #000; /* Black background */
+      background-color: #000;
       overflow: hidden;
       cursor: zoom-in;
       user-select: none;
@@ -69,7 +69,7 @@
       user-select: none;
       pointer-events: none;
       max-width: none;
-      visibility: hidden; /* Start hidden to avoid flash */
+      opacity: 0; /* Start fully transparent */
     }
   </style>
 </head>
@@ -140,7 +140,7 @@
       translateY = 0;
 
       applyTransform();
-      image.style.visibility = 'visible'; // Show after layout is complete
+      image.style.opacity = '1'; // Reveal the image once ready
     }
 
     viewer.addEventListener('mousedown', (e) => {
@@ -212,7 +212,7 @@
     });
 
     function loadImage(src) {
-      image.style.visibility = 'hidden';
+      image.style.opacity = '0'; // Hide during transition
       image.src = src;
       isZoomed = false;
       viewer.classList.remove('zoomed');
