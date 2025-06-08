@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Image Viewer</title>
+  <title>Image Viewer with Zoom</title>
   <style>
     body {
       font-family: sans-serif;
@@ -14,11 +14,20 @@
 
     .viewer {
       margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      cursor: zoom-in;
     }
 
-    .viewer img {
+    .viewer.zoomed {
+      cursor: grab;
+    }
+
+    #mainImage {
       max-width: 100%;
       max-height: 500px;
+      transition: transform 0.3s ease;
     }
 
     .thumbnails {
@@ -44,9 +53,9 @@
 </head>
 <body>
 
-  <h1>sdfsdfImage Viewsdfer</h1>
+  <h1>Image Viewer with Zoom</h1>
 
-  <div class="viewer">
+  <div class="viewer" id="viewer">
     <img id="mainImage" src="images/photo1.jpg" alt="Main" />
   </div>
 
@@ -54,14 +63,63 @@
     <img src="images/photo1.jpg" onclick="showImage('images/photo1.jpg')" />
     <img src="images/photo2.jpg" onclick="showImage('images/photo2.jpg')" />
     <img src="images/photo3.jpg" onclick="showImage('images/photo3.jpg')" />
+    <img src="images/photo4.jpg" onclick="showImage('images/photo4.jpg')" />
   </div>
 
   <script>
+    const mainImage = document.getElementById('mainImage');
+    const viewer = document.getElementById('viewer');
+    let zoomed = false;
+    let offsetX = 0, offsetY = 0;
+    let isDragging = false;
+    let startX, startY;
+
+    mainImage.addEventListener('click', () => {
+      zoomed = !zoomed;
+      if (zoomed) {
+        viewer.classList.add('zoomed');
+        mainImage.style.transform = 'scale(2)';
+      } else {
+        viewer.classList.remove('zoomed');
+        mainImage.style.transform = 'scale(1)';
+        mainImage.style.transformOrigin = 'center center';
+        mainImage.style.left = '0px';
+        mainImage.style.top = '0px';
+      }
+    });
+
+    viewer.addEventListener('mousedown', (e) => {
+      if (!zoomed) return;
+      isDragging = true;
+      startX = e.clientX - offsetX;
+      startY = e.clientY - offsetY;
+      viewer.style.cursor = 'grabbing';
+    });
+
+    viewer.addEventListener('mouseup', () => {
+      isDragging = false;
+      viewer.style.cursor = 'grab';
+    });
+
+    viewer.addEventListener('mouseleave', () => {
+      isDragging = false;
+      viewer.style.cursor = zoomed ? 'grab' : 'zoom-in';
+    });
+
+    viewer.addEventListener('mousemove', (e) => {
+      if (!zoomed || !isDragging) return;
+      offsetX = e.clientX - startX;
+      offsetY = e.clientY - startY;
+      mainImage.style.transform = `scale(2) translate(${offsetX / 2}px, ${offsetY / 2}px)`;
+    });
+
     function showImage(src) {
-      document.getElementById('mainImage').src = src;
+      mainImage.src = src;
+      zoomed = false;
+      mainImage.style.transform = 'scale(1)';
+      viewer.classList.remove('zoomed');
     }
   </script>
 
 </body>
 </html>
-
