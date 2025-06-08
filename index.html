@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Image Viewer with Drag, Click Zoom & Wheel Zoom</title>
+  <title>Image Viewer with Drag, Click Zoom & Precise Wheel Zoom</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
@@ -215,7 +215,7 @@
       applyTransform();
     });
 
-    // Wheel zooming centered on cursor
+    // Wheel zooming precisely centered on cursor
     viewer.addEventListener('wheel', e => {
       e.preventDefault();
       if (!image.naturalWidth || !image.naturalHeight) return;
@@ -230,16 +230,27 @@
 
       if (newScale === scale) return;
 
-      const imgRelX = cursorX - ((rect.width - image.naturalWidth * scale) / 2 + translateX);
-      const imgRelY = cursorY - ((rect.height - image.naturalHeight * scale) / 2 + translateY);
+      // Calculate image coordinates under cursor before zoom
+      const viewerWidth = rect.width;
+      const viewerHeight = rect.height;
+      const offsetX = (viewerWidth - image.naturalWidth * scale) / 2 + translateX;
+      const offsetY = (viewerHeight - image.naturalHeight * scale) / 2 + translateY;
 
-      const newImgRelX = imgRelX * (newScale / scale);
-      const newImgRelY = imgRelY * (newScale / scale);
+      const imgCoordX = (cursorX - offsetX) / scale;
+      const imgCoordY = (cursorY - offsetY) / scale;
 
-      translateX -= (newImgRelX - imgRelX);
-      translateY -= (newImgRelY - imgRelY);
-
+      // Set new scale
       scale = newScale;
+
+      // After zoom, calculate new offset so image coordinate under cursor stays fixed
+      const newOffsetX = cursorX - imgCoordX * scale;
+      const newOffsetY = cursorY - imgCoordY * scale;
+
+      // Calculate translateX/Y from new offsets relative to center offset
+      translateX = newOffsetX - (viewerWidth - image.naturalWidth * scale) / 2;
+      translateY = newOffsetY - (viewerHeight - image.naturalHeight * scale) / 2;
+
+      // Clamp translation and update zoom state
       isZoomed = scale > baseScale;
       viewer.classList.toggle('zoomed', isZoomed);
 
