@@ -41,7 +41,7 @@
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
-      /* Remove hover highlight */
+      outline: none;
     }
     .viewer {
       position: relative;
@@ -62,21 +62,22 @@
       transform-origin: top left;
       pointer-events: none;
       max-width: none;
-      display: none; /* hidden until loaded */
+      display: none;
       will-change: transform;
       user-select: none;
+      transition: opacity 0.2s ease;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="thumbnails" id="thumbnails">
-      <img src="images/photo1.jpg" onclick="loadImage('images/photo1.jpg')" alt="Thumb 1" />
-      <img src="images/photo2.jpg" onclick="loadImage('images/photo2.jpg')" alt="Thumb 2" />
-      <img src="images/photo3.jpg" onclick="loadImage('images/photo3.jpg')" alt="Thumb 3" />
+      <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="Thumb 1" />
+      <img src="images/photo2.jpg" data-src="images/photo2.jpg" alt="Thumb 2" />
+      <img src="images/photo3.jpg" data-src="images/photo3.jpg" alt="Thumb 3" />
     </div>
     <div class="viewer" id="viewer">
-      <img id="mainImage" src="images/photo1.jpg" alt="Main Image" />
+      <img id="mainImage" src="" alt="Main Image" />
     </div>
   </div>
 
@@ -84,10 +85,11 @@
     const viewer = document.getElementById('viewer');
     const image = document.getElementById('mainImage');
     const thumbnails = document.getElementById('thumbnails');
+    const thumbnailImgs = thumbnails.querySelectorAll('img');
 
-    let baseScale = 1;      
-    let scale = 1;          
-    const maxScaleFactor = 5; 
+    let baseScale = 1;
+    let scale = 1;
+    const maxScaleFactor = 5;
     let translateX = 0;
     let translateY = 0;
     let isZoomed = false;
@@ -96,6 +98,27 @@
     let hasDragged = false;
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
+
+    // Minimum zoom factor for scroll zoom (110% of baseScale)
+    const minScaleFactor = 1.1;
+
+    // Preload images and store natural sizes
+    const imagesData = [];
+    let currentImageIndex = 0;
+
+    function preloadImages() {
+      thumbnailImgs.forEach((thumb, idx) => {
+        const src = thumb.dataset.src;
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          imagesData[idx] = { src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
+          if (idx === 0) {
+            setImage(0);
+          }
+        };
+      });
+    }
 
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
@@ -129,6 +152,7 @@
       const scaleY = viewerRect.height / ih;
 
       baseScale = Math.min(scaleX, scaleY);
+      // On load, start zoom at exactly baseScale (100%)
       scale = baseScale;
       translateX = 0;
       translateY = 0;
@@ -140,16 +164,43 @@
       image.style.display = 'block';
     }
 
-    function loadImage(src) {
-      image.style.display = 'none';
-      image.src = src;
+    function setImage(index) {
+      if (!imagesData[index]) return;
+      currentImageIndex = index;
+      const { src, naturalWidth, naturalHeight } = imagesData[index];
+
+      image.style.opacity = 0;
+      image.style.pointerEvents = 'none';
+
+      setTimeout(() => {
+        image.src = src;
+        image.onload = () => {
+          image.style.display = 'block';
+          image.style.opacity = 1;
+          image.style.pointerEvents = '';
+          image.naturalWidth = naturalWidth;
+          image.naturalHeight = naturalHeight;
+          fitImageToViewer();
+        };
+      }, 200);
+
+      isZoomed = false;
+      scale = baseScale;
       translateX = 0;
       translateY = 0;
-      scale = baseScale;
-      isZoomed = false;
       viewer.classList.remove('zoomed');
       thumbnails.classList.remove('hidden');
     }
+
+    thumbnailImgs.forEach((thumb, i) => {
+      thumb.addEventListener('click', () => {
+        if (currentImageIndex !== i) {
+          setImage(i);
+        }
+      });
+      thumb.style.border = '2px solid transparent';
+      thumb.style.outline = 'none';
+    });
 
     viewer.addEventListener('mousedown', e => {
       if (!isZoomed) return;
@@ -198,26 +249,22 @@
         const viewerWidth = window.innerWidth;
         const viewerHeight = window.innerHeight;
 
-        // Scale image to fill entire viewport (without cropping)
         const scaleX = viewerWidth / image.naturalWidth;
         const scaleY = viewerHeight / image.naturalHeight;
         scale = Math.min(scaleX, scaleY);
 
-        // Calculate translation to center image on click point and fill screen
         const imgWidthScaled = image.naturalWidth * scale;
         const imgHeightScaled = image.naturalHeight * scale;
 
         const offsetX = (viewerWidth - imgWidthScaled) / 2;
         const offsetY = (viewerHeight - imgHeightScaled) / 2;
 
-        // Translate so clicked point moves to center of viewport
         const clickOffsetX = clickX - offsetX;
         const clickOffsetY = clickY - offsetY;
 
         translateX = (viewerWidth / 2 - clickX) + (clickOffsetX - imgWidthScaled / 2);
         translateY = (viewerHeight / 2 - clickY) + (clickOffsetY - imgHeightScaled / 2);
 
-        // Clamp translation so no empty edges show
         clampTranslation();
 
         viewer.classList.add('zoomed');
@@ -243,7 +290,9 @@
 
       const zoomStep = 0.1;
       let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
-      newScale = Math.min(Math.max(newScale, baseScale), baseScale * maxScaleFactor);
+
+      // Clamp so zoom can't go below 110% of baseScale
+      newScale = Math.min(Math.max(newScale, baseScale * minScaleFactor), baseScale * maxScaleFactor);
 
       if (newScale === scale) return;
 
@@ -263,33 +312,14 @@
       translateX = newOffsetX - (viewerWidth - image.naturalWidth * scale) / 2;
       translateY = newOffsetY - (viewerHeight - image.naturalHeight * scale) / 2;
 
-      isZoomed = scale > baseScale;
-      viewer.classList.toggle('zoomed', isZoomed);
-      if (isZoomed) {
-        thumbnails.classList.add('hidden');
-      } else {
-        thumbnails.classList.remove('hidden');
-      }
-
       applyTransform();
-    }, { passive: false });
-
-    image.onload = fitImageToViewer;
-    window.addEventListener('resize', () => {
-      if (!isZoomed) {
-        fitImageToViewer();
-      } else {
-        // When zoomed fullscreen, recalc scale to fill viewport on resize
-        const viewerWidth = window.innerWidth;
-        const viewerHeight = window.innerHeight;
-        const scaleX = viewerWidth / image.naturalWidth;
-        const scaleY = viewerHeight / image.naturalHeight;
-        scale = Math.min(scaleX, scaleY);
-        translateX = 0;
-        translateY = 0;
-        applyTransform();
-      }
     });
+
+    window.addEventListener('resize', () => {
+      fitImageToViewer();
+    });
+
+    preloadImages();
   </script>
 </body>
 </html>
