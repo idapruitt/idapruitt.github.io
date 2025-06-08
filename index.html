@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Responsive Image Viewer</title>
+  <title>Centered Image Viewer</title>
   <style>
     html, body {
       margin: 0;
@@ -62,9 +62,9 @@
 
     .viewer img {
       position: absolute;
-      top: 0;
-      left: 0;
-      transform-origin: top left;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
       transition: transform 0.2s ease;
       user-select: none;
       pointer-events: none;
@@ -104,16 +104,14 @@
 
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
-      const imageWidth = image.naturalWidth * scale;
-      const imageHeight = image.naturalHeight * scale;
+      const imgW = image.naturalWidth * scale;
+      const imgH = image.naturalHeight * scale;
 
-      const maxTranslateX = 0;
-      const minTranslateX = viewerRect.width - imageWidth;
-      const maxTranslateY = 0;
-      const minTranslateY = viewerRect.height - imageHeight;
+      const maxX = (imgW - viewerRect.width) / 2;
+      const maxY = (imgH - viewerRect.height) / 2;
 
-      translateX = Math.min(maxTranslateX, Math.max(minTranslateX, translateX));
-      translateY = Math.min(maxTranslateY, Math.max(minTranslateY, translateY));
+      translateX = Math.max(-maxX, Math.min(maxX, translateX));
+      translateY = Math.max(-maxY, Math.min(maxY, translateY));
     }
 
     function applyTransform() {
@@ -131,8 +129,8 @@
 
       baseScale = Math.min(scaleX, scaleY);
       scale = baseScale;
-      translateX = (viewerRect.width - iw * scale) / 2;
-      translateY = (viewerRect.height - ih * scale) / 2;
+      translateX = 0;
+      translateY = 0;
 
       applyTransform();
     }
@@ -182,21 +180,21 @@
         return;
       }
 
-      const viewerRect = viewer.getBoundingClientRect();
-      const offsetX = e.clientX - viewerRect.left;
-      const offsetY = e.clientY - viewerRect.top;
+      const rect = viewer.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left - rect.width / 2;
+      const offsetY = e.clientY - rect.top - rect.height / 2;
 
       isZoomed = !isZoomed;
       viewer.classList.toggle('zoomed', isZoomed);
 
       if (isZoomed) {
         scale = baseScale * zoomFactor;
-        translateX = viewerRect.width / 2 - offsetX * scale;
-        translateY = viewerRect.height / 2 - offsetY * scale;
+        translateX = -offsetX * (zoomFactor - 1);
+        translateY = -offsetY * (zoomFactor - 1);
       } else {
         scale = baseScale;
-        translateX = (viewerRect.width - image.naturalWidth * scale) / 2;
-        translateY = (viewerRect.height - image.naturalHeight * scale) / 2;
+        translateX = 0;
+        translateY = 0;
       }
 
       applyTransform();
@@ -209,7 +207,6 @@
     }
 
     image.onload = fitImageToViewer;
-
     window.addEventListener('resize', fitImageToViewer);
   </script>
 
