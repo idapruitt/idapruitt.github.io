@@ -53,8 +53,8 @@
 
 
 //imageviewer
-
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -102,26 +102,4 @@
 </head>
 <body>
 
-  <h1>Image Viewer</h1>
-  <div class="viewer">
-    <img id="mainImage" src="https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=800" alt="Main" />
-  </div>
-
-  <div class="thumbnails">
-    <img src="https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=300" alt="Thumb 1" onclick="showImage(this.src)" />
-    <img src="https://images.unsplash.com/photo-1495567720989-cebdbdd97913?w=300" alt="Thumb 2" onclick="showImage(this.src)" />
-    <img src="https://images.unsplash.com/photo-1523413651479-597eb2da0ad6?w=300" alt="Thumb 3" onclick="showImage(this.src)" />
-    <img src="https://images.unsplash.com/photo-1518779578993-ec3579fee39f?w=300" alt="Thumb 4" onclick="showImage(this.src)" />
-  </div>
-
-  <script>
-    function showImage(src) {
-      const highResSrc = src.replace("w=300", "w=800"); // Load higher-res image in main viewer
-      document.getElementById('mainImage').src = highResSrc;
-    }
-  </script>
-
-
-
-</body>
-</html>
+  <h1>Image Viewer</
