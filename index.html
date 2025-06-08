@@ -2,30 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Centered Zoom Image Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Viewer</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #888;
+      background-color: #000;
       font-family: sans-serif;
-      user-select: none;
     }
+
+    /* Loading Overlay */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: black;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #loadingMessage {
+      margin-bottom: 20px;
+      font-size: 1.2em;
+      letter-spacing: 0.5px;
+    }
+    #progressBarContainer {
+      width: 300px;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    #progressBar {
+      height: 100%;
+      width: 0%;
+      background: white;
+      transition: width 0.3s ease;
+    }
+
     .container {
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #888;
+      background-color: #000;
     }
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #888;
+      background-color: #000;
       z-index: 10;
       transition: opacity 0.3s ease;
-      user-select: none;
     }
     .thumbnails.hidden {
       opacity: 0;
@@ -43,10 +73,11 @@
       border: 2px solid transparent;
       outline: none;
     }
+
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #888;
+      background-color: #000;
       overflow: hidden;
       cursor: zoom-in;
     }
@@ -70,17 +101,26 @@
   </style>
 </head>
 <body>
+  <!-- Loading screen -->
+  <div id="loadingScreen">
+    <div id="loadingMessage">Loading big paintings</div>
+    <div id="progressBarContainer">
+      <div id="progressBar"></div>
+    </div>
+  </div>
+
+  <!-- Main viewer -->
   <div class="container">
     <div class="thumbnails" id="thumbnails">
-      <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="Thumb 1" />
-      <img src="images/photo2.jpg" data-src="images/photo2.jpg" alt="Thumb 2" />
-      <img src="images/photo3.jpg" data-src="images/photo3.jpg" alt="Thumb 3" />
-      <img src="images/photo4.jpg" data-src="images/photo3.jpg" alt="Thumb 4" />
-      <img src="images/photo5.jpg" data-src="images/photo3.jpg" alt="Thumb 5" />
-      <img src="images/photo6.jpg" data-src="images/photo3.jpg" alt="Thumb 6" />
+      <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="1" />
+      <img src="images/photo2.jpg" data-src="images/photo2.jpg" alt="2" />
+      <img src="images/photo3.jpg" data-src="images/photo3.jpg" alt="3" />
+      <img src="images/photo4.jpg" data-src="images/photo4.jpg" alt="4" />
+      <img src="images/photo5.jpg" data-src="images/photo5.jpg" alt="5" />
+      <img src="images/photo6.jpg" data-src="images/photo6.jpg" alt="6" />
     </div>
     <div class="viewer" id="viewer">
-      <img id="mainImage" src="" alt="Main Image" />
+      <img id="mainImage" src="" alt="Main View" />
     </div>
   </div>
 
@@ -90,11 +130,14 @@
     const thumbnails = document.getElementById('thumbnails');
     const thumbnailImgs = thumbnails.querySelectorAll('img');
 
+    const loadingScreen = document.getElementById('loadingScreen');
+    const progressBar = document.getElementById('progressBar');
+
     let baseScale = 1;
     let scale = 1;
-    const maxScaleFactor = 10;
     const clickZoomFactor = 2.0;
     const minScaleFactor = 1.6;
+    const maxScaleFactor = 10;
 
     let translateX = 0;
     let translateY = 0;
@@ -107,20 +150,6 @@
 
     const imagesData = [];
     let currentImageIndex = 0;
-
-    function preloadImages() {
-      thumbnailImgs.forEach((thumb, idx) => {
-        const src = thumb.dataset.src;
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesData[idx] = { src, naturalWidth: img.naturalWidth, naturalHeight: img.naturalHeight };
-          if (idx === 0) {
-            setImage(0);
-          }
-        };
-      });
-    }
 
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
@@ -310,6 +339,32 @@
     });
 
     window.addEventListener('resize', fitImageToViewer);
+
+    function preloadImages() {
+      const total = thumbnailImgs.length;
+      let loaded = 0;
+
+      thumbnailImgs.forEach((thumb, idx) => {
+        const src = thumb.dataset.src;
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          imagesData[idx] = {
+            src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight
+          };
+          loaded++;
+          progressBar.style.width = `${(loaded / total) * 100}%`;
+          if (loaded === total) {
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+              setImage(0);
+            }, 300);
+          }
+        };
+      });
+    }
 
     preloadImages();
   </script>
