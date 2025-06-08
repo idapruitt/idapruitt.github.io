@@ -17,7 +17,6 @@
       height: 100%;
       background-color: #000;
     }
-
     .thumbnails {
       display: flex;
       justify-content: center;
@@ -27,7 +26,6 @@
       z-index: 10;
       transition: opacity 0.3s ease;
     }
-
     .thumbnails.hidden {
       opacity: 0;
       pointer-events: none;
@@ -36,7 +34,6 @@
       margin: 0;
       overflow: hidden;
     }
-
     .thumbnails img {
       width: 100px;
       height: 70px;
@@ -53,15 +50,12 @@
       overflow: hidden;
       cursor: zoom-in;
     }
-
     .viewer.zoomed {
       cursor: grab;
     }
-
     .viewer.zoomed:active {
       cursor: grabbing;
     }
-
     .viewer img {
       position: absolute;
       top: 0; left: 0;
@@ -86,7 +80,7 @@
       <img src="images/photo6.jpg" data-src="images/photo6.jpg" alt="6" />
     </div>
     <div class="viewer" id="viewer">
-      <img id="mainImage" src="" alt="Main View" />
+      <img id="mainImage" alt="Main View" />
     </div>
   </div>
 
@@ -162,18 +156,19 @@
       currentImageIndex = index;
       const { src } = imagesData[index];
 
-      image.style.opacity = 0;
-      image.style.pointerEvents = 'none';
-
-      setTimeout(() => {
+      const tempImage = new Image();
+      tempImage.src = src;
+      tempImage.onload = () => {
+        image.style.opacity = 0;
+        image.style.pointerEvents = 'none';
         image.src = src;
-        image.onload = () => {
-          image.style.display = 'block';
+
+        requestAnimationFrame(() => {
           image.style.opacity = 1;
           image.style.pointerEvents = '';
           fitImageToViewer();
-        };
-      }, 100);
+        });
+      };
 
       isZoomed = false;
       scale = baseScale;
@@ -184,18 +179,6 @@
     }
 
     thumbnailImgs.forEach((thumb, i) => {
-      const src = thumb.dataset.src;
-      const img = new Image();
-      img.src = src;
-      img.onload = () => {
-        imagesData[i] = {
-          src,
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight
-        };
-        if (i === 0) setImage(0);
-      };
-
       thumb.addEventListener('click', () => {
         if (currentImageIndex !== i) {
           setImage(i);
@@ -312,6 +295,24 @@
     });
 
     window.addEventListener('resize', fitImageToViewer);
+
+    function preloadImages() {
+      thumbnailImgs.forEach((thumb, idx) => {
+        const src = thumb.dataset.src;
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          imagesData[idx] = {
+            src,
+            naturalWidth: img.naturalWidth,
+            naturalHeight: img.naturalHeight
+          };
+          if (idx === 0) setImage(0);
+        };
+      });
+    }
+
+    preloadImages();
   </script>
 </body>
 </html>
