@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Image Viewer with Drag, Click Zoom & Precise Wheel Zoom</title>
+  <title>Fullscreen Zoom Image Viewer</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background-color: #000;
+      background-color: #888;
       font-family: sans-serif;
       user-select: none;
     }
@@ -15,15 +15,25 @@
       display: flex;
       flex-direction: column;
       height: 100%;
-      background-color: #000;
+      background-color: #888;
     }
     .thumbnails {
       display: flex;
       justify-content: center;
       gap: 10px;
       padding: 10px;
-      background-color: #000;
+      background-color: #888;
       z-index: 10;
+      transition: opacity 0.3s ease;
+      user-select: none;
+    }
+    .thumbnails.hidden {
+      opacity: 0;
+      pointer-events: none;
+      height: 0;
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
     }
     .thumbnails img {
       width: 100px;
@@ -31,15 +41,12 @@
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
-      transition: border-color 0.3s;
-    }
-    .thumbnails img:hover {
-      border-color: #4CAF50;
+      /* Remove hover highlight */
     }
     .viewer {
       position: relative;
       flex: 1;
-      background-color: #000;
+      background-color: #888;
       overflow: hidden;
       cursor: zoom-in;
     }
@@ -55,7 +62,7 @@
       transform-origin: top left;
       pointer-events: none;
       max-width: none;
-      display: none; /* Hidden initially until loaded & transformed */
+      display: none; /* hidden until loaded */
       will-change: transform;
       user-select: none;
     }
@@ -63,7 +70,7 @@
 </head>
 <body>
   <div class="container">
-    <div class="thumbnails">
+    <div class="thumbnails" id="thumbnails">
       <img src="images/photo1.jpg" onclick="loadImage('images/photo1.jpg')" alt="Thumb 1" />
       <img src="images/photo2.jpg" onclick="loadImage('images/photo2.jpg')" alt="Thumb 2" />
       <img src="images/photo3.jpg" onclick="loadImage('images/photo3.jpg')" alt="Thumb 3" />
@@ -76,22 +83,20 @@
   <script>
     const viewer = document.getElementById('viewer');
     const image = document.getElementById('mainImage');
+    const thumbnails = document.getElementById('thumbnails');
 
-    let baseScale = 1;      // scale to fit viewer on load/resize
-    let scale = 1;          // current zoom scale
-    const maxScaleFactor = 5; // max zoom is 5x base
-    const minScaleFactor = 1; // min zoom is base scale (fully zoomed out)
+    let baseScale = 1;      
+    let scale = 1;          
+    const maxScaleFactor = 5; 
     let translateX = 0;
     let translateY = 0;
     let isZoomed = false;
 
-    // Drag state
     let isDragging = false;
     let hasDragged = false;
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
 
-    // Clamp translation so image can't be panned off edges
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
       const imgWidth = image.naturalWidth * scale;
@@ -104,7 +109,6 @@
       translateY = Math.min(maxTranslateY, Math.max(-maxTranslateY, translateY));
     }
 
-    // Apply transform with centering
     function applyTransform() {
       clampTranslation();
       const viewerRect = viewer.getBoundingClientRect();
@@ -115,12 +119,11 @@
       image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
     }
 
-    // Fit image to viewer on load & resize
     function fitImageToViewer() {
       const viewerRect = viewer.getBoundingClientRect();
       const iw = image.naturalWidth;
       const ih = image.naturalHeight;
-      if (iw === 0 || ih === 0) return; // image not loaded yet
+      if (iw === 0 || ih === 0) return;
 
       const scaleX = viewerRect.width / iw;
       const scaleY = viewerRect.height / ih;
@@ -131,26 +134,23 @@
       translateY = 0;
       isZoomed = false;
       viewer.classList.remove('zoomed');
+      thumbnails.classList.remove('hidden');
 
       applyTransform();
-
-      // Show image only after initial transform applied
       image.style.display = 'block';
     }
 
-    // Load new image from thumbnail click
     function loadImage(src) {
       image.style.display = 'none';
       image.src = src;
-      // Reset zoom/pan state on new image
       translateX = 0;
       translateY = 0;
       scale = baseScale;
       isZoomed = false;
       viewer.classList.remove('zoomed');
+      thumbnails.classList.remove('hidden');
     }
 
-    // Mouse down: start dragging if zoomed in
     viewer.addEventListener('mousedown', e => {
       if (!isZoomed) return;
       isDragging = true;
@@ -163,7 +163,6 @@
       e.preventDefault();
     });
 
-    // Mouse move: if dragging, pan image
     viewer.addEventListener('mousemove', e => {
       if (!isDragging) return;
       hasDragged = true;
@@ -174,7 +173,6 @@
       applyTransform();
     });
 
-    // Mouse up & leave: stop dragging
     viewer.addEventListener('mouseup', e => {
       if (isDragging) {
         isDragging = false;
@@ -188,7 +186,6 @@
       }
     });
 
-    // Only toggle zoom if no drag happened
     viewer.addEventListener('click', e => {
       if (hasDragged) return;
 
@@ -196,26 +193,46 @@
       const clickX = e.clientX - rect.left;
       const clickY = e.clientY - rect.top;
 
-      const imageOffsetX = (clickX - rect.width / 2);
-      const imageOffsetY = (clickY - rect.height / 2);
-
       if (!isZoomed) {
         isZoomed = true;
-        scale = Math.min(baseScale * 2, baseScale * maxScaleFactor);
-        translateX = -imageOffsetX * (scale / baseScale - 1);
-        translateY = -imageOffsetY * (scale / baseScale - 1);
+        const viewerWidth = window.innerWidth;
+        const viewerHeight = window.innerHeight;
+
+        // Scale image to fill entire viewport (without cropping)
+        const scaleX = viewerWidth / image.naturalWidth;
+        const scaleY = viewerHeight / image.naturalHeight;
+        scale = Math.min(scaleX, scaleY);
+
+        // Calculate translation to center image on click point and fill screen
+        const imgWidthScaled = image.naturalWidth * scale;
+        const imgHeightScaled = image.naturalHeight * scale;
+
+        const offsetX = (viewerWidth - imgWidthScaled) / 2;
+        const offsetY = (viewerHeight - imgHeightScaled) / 2;
+
+        // Translate so clicked point moves to center of viewport
+        const clickOffsetX = clickX - offsetX;
+        const clickOffsetY = clickY - offsetY;
+
+        translateX = (viewerWidth / 2 - clickX) + (clickOffsetX - imgWidthScaled / 2);
+        translateY = (viewerHeight / 2 - clickY) + (clickOffsetY - imgHeightScaled / 2);
+
+        // Clamp translation so no empty edges show
+        clampTranslation();
+
         viewer.classList.add('zoomed');
+        thumbnails.classList.add('hidden');
       } else {
         isZoomed = false;
         scale = baseScale;
         translateX = 0;
         translateY = 0;
         viewer.classList.remove('zoomed');
+        thumbnails.classList.remove('hidden');
       }
       applyTransform();
     });
 
-    // Wheel zooming precisely centered on cursor
     viewer.addEventListener('wheel', e => {
       e.preventDefault();
       if (!image.naturalWidth || !image.naturalHeight) return;
@@ -230,7 +247,6 @@
 
       if (newScale === scale) return;
 
-      // Calculate image coordinates under cursor before zoom
       const viewerWidth = rect.width;
       const viewerHeight = rect.height;
       const offsetX = (viewerWidth - image.naturalWidth * scale) / 2 + translateX;
@@ -239,26 +255,41 @@
       const imgCoordX = (cursorX - offsetX) / scale;
       const imgCoordY = (cursorY - offsetY) / scale;
 
-      // Set new scale
       scale = newScale;
 
-      // After zoom, calculate new offset so image coordinate under cursor stays fixed
       const newOffsetX = cursorX - imgCoordX * scale;
       const newOffsetY = cursorY - imgCoordY * scale;
 
-      // Calculate translateX/Y from new offsets relative to center offset
       translateX = newOffsetX - (viewerWidth - image.naturalWidth * scale) / 2;
       translateY = newOffsetY - (viewerHeight - image.naturalHeight * scale) / 2;
 
-      // Clamp translation and update zoom state
       isZoomed = scale > baseScale;
       viewer.classList.toggle('zoomed', isZoomed);
+      if (isZoomed) {
+        thumbnails.classList.add('hidden');
+      } else {
+        thumbnails.classList.remove('hidden');
+      }
 
       applyTransform();
     }, { passive: false });
 
     image.onload = fitImageToViewer;
-    window.addEventListener('resize', fitImageToViewer);
+    window.addEventListener('resize', () => {
+      if (!isZoomed) {
+        fitImageToViewer();
+      } else {
+        // When zoomed fullscreen, recalc scale to fill viewport on resize
+        const viewerWidth = window.innerWidth;
+        const viewerHeight = window.innerHeight;
+        const scaleX = viewerWidth / image.naturalWidth;
+        const scaleY = viewerHeight / image.naturalHeight;
+        scale = Math.min(scaleX, scaleY);
+        translateX = 0;
+        translateY = 0;
+        applyTransform();
+      }
+    });
   </script>
 </body>
 </html>
