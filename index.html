@@ -90,6 +90,8 @@
     const image = document.getElementById('mainImage');
 
     let scale = 1;
+    let baseScale = 1;
+    let zoomFactor = 2;
     let translateX = 0;
     let translateY = 0;
     let isZoomed = false;
@@ -117,6 +119,22 @@
     function applyTransform() {
       clampTranslation();
       image.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
+
+    function fitImageToViewer() {
+      const viewerRect = viewer.getBoundingClientRect();
+      const iw = image.naturalWidth;
+      const ih = image.naturalHeight;
+
+      const scaleX = viewerRect.width / iw;
+      const scaleY = viewerRect.height / ih;
+
+      baseScale = Math.min(scaleX, scaleY);
+      scale = baseScale;
+      translateX = (viewerRect.width - iw * scale) / 2;
+      translateY = (viewerRect.height - ih * scale) / 2;
+
+      applyTransform();
     }
 
     viewer.addEventListener('mousedown', (e) => {
@@ -164,20 +182,21 @@
         return;
       }
 
+      const viewerRect = viewer.getBoundingClientRect();
+      const offsetX = e.clientX - viewerRect.left;
+      const offsetY = e.clientY - viewerRect.top;
+
       isZoomed = !isZoomed;
       viewer.classList.toggle('zoomed', isZoomed);
 
       if (isZoomed) {
-        scale = 2;
-        const rect = viewer.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
-        translateX = rect.width / 2 - offsetX * scale;
-        translateY = rect.height / 2 - offsetY * scale;
+        scale = baseScale * zoomFactor;
+        translateX = viewerRect.width / 2 - offsetX * scale;
+        translateY = viewerRect.height / 2 - offsetY * scale;
       } else {
-        scale = 1;
-        translateX = 0;
-        translateY = 0;
+        scale = baseScale;
+        translateX = (viewerRect.width - image.naturalWidth * scale) / 2;
+        translateY = (viewerRect.height - image.naturalHeight * scale) / 2;
       }
 
       applyTransform();
@@ -186,13 +205,12 @@
     function loadImage(src) {
       image.src = src;
       isZoomed = false;
-      scale = 1;
-      translateX = 0;
-      translateY = 0;
       viewer.classList.remove('zoomed');
     }
 
-    image.onload = applyTransform;
+    image.onload = fitImageToViewer;
+
+    window.addEventListener('resize', fitImageToViewer);
   </script>
 
 </body>
