@@ -66,7 +66,7 @@
       transform-origin: top left;
       pointer-events: none;
       max-width: none;
-      display: none;
+      display: block;
       will-change: transform;
       user-select: none;
       transition: opacity 0.2s ease;
@@ -83,7 +83,7 @@
       <img src="images/photo5.jpg" data-src="images/photo5.jpg" alt="5" />
     </div>
     <div class="viewer" id="viewer">
-      <img id="mainImage" src="" alt="Main View" />
+      <img id="mainImage" src="images/photo1.jpg" alt="Main View" />
     </div>
   </div>
 
@@ -107,9 +107,6 @@
     let hasDragged = false;
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
-
-    const imagesData = [];
-    let currentImageIndex = 0;
 
     let pointers = [];
     let initialPinchDistance = null;
@@ -155,40 +152,15 @@
       thumbnails.classList.remove('hidden');
 
       applyTransform();
-      image.style.display = 'block';
-    }
-
-    function setImage(index) {
-      if (!imagesData[index]) return;
-      currentImageIndex = index;
-      const { src, naturalWidth, naturalHeight } = imagesData[index];
-
-      const tempImg = new Image();
-      tempImg.src = src;
-      tempImg.onload = () => {
-        image.style.opacity = 0;
-        image.src = src;
-        image.onload = () => {
-          image.naturalWidth = naturalWidth;
-          image.naturalHeight = naturalHeight;
-          fitImageToViewer();
-          image.style.opacity = 1;
-        };
-      };
-
-      isZoomed = false;
-      scale = baseScale;
-      translateX = 0;
-      translateY = 0;
-      viewer.classList.remove('zoomed');
-      thumbnails.classList.remove('hidden');
     }
 
     thumbnailImgs.forEach((thumb, i) => {
       thumb.addEventListener('click', () => {
-        if (currentImageIndex !== i) {
-          setImage(i);
-        }
+        const src = thumb.dataset.src;
+        image.src = src;
+        image.onload = () => {
+          fitImageToViewer();
+        };
       });
     });
 
@@ -313,26 +285,7 @@
     });
 
     window.addEventListener('resize', fitImageToViewer);
-
-    function preloadImages() {
-      thumbnailImgs.forEach((thumb, idx) => {
-        const src = thumb.dataset.src;
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesData[idx] = {
-            src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight
-          };
-          if (idx === 0) {
-            setImage(0); // Show first image when loaded
-          }
-        };
-      });
-    }
-
-    preloadImages();
+    image.onload = fitImageToViewer;
   </script>
 </body>
 </html>
