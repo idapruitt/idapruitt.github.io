@@ -46,6 +46,7 @@
       cursor: pointer;
       border: 2px solid transparent;
       outline: none;
+      transition: border-color 0.2s ease;
     }
 
     .viewer {
@@ -100,8 +101,12 @@
 
     let baseScale = 1;
     let scale = 1;
+
+    // Detect mobile for zoom min and start scale
+    const isMobile = window.matchMedia('(pointer: coarse)').matches;
+
     const clickZoomFactor = 2.0;
-    const minScaleFactor = 1.6;
+    const minScaleFactor = isMobile ? 1 : 1.6;
     const maxScaleFactor = 10;
 
     let translateX = 0;
@@ -112,9 +117,6 @@
     let hasDragged = false;
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
-
-    let initialPinchDistance = null;
-    let initialMid = null;
 
     const imagesData = [];
     let currentImageIndex = 0;
@@ -151,7 +153,10 @@
       const scaleY = viewerRect.height / ih;
 
       baseScale = Math.min(scaleX, scaleY);
-      scale = baseScale;
+
+      // On mobile, start at 100% zoom (baseScale * 1), else baseScale
+      scale = isMobile ? baseScale * 1 : baseScale;
+
       translateX = 0;
       translateY = 0;
       isZoomed = false;
@@ -162,26 +167,22 @@
       image.style.display = 'block';
     }
 
+    function updateThumbnailHighlight() {
+      thumbnailImgs.forEach((thumb, i) => {
+        if (i === currentImageIndex) {
+          thumb.style.borderColor = '#fff';
+        } else {
+          thumb.style.borderColor = 'transparent';
+        }
+      });
+    }
+
     function setImage(index) {
       if (!imagesData[index]) return;
       currentImageIndex = index;
-      const { src, naturalWidth, naturalHeight } = imagesData[index];
+      updateThumbnailHighlight();
 
-      image.style.opacity = 0;
-      image.style.pointerEvents = 'none';
-      image.style.display = 'none';
-
-      const tempImg = new Image();
-      tempImg.src = src;
-      tempImg.onload = () => {
-        image.src = src;
-        image.naturalWidth = naturalWidth;
-        image.naturalHeight = naturalHeight;
-        fitImageToViewer();
-        image.style.display = 'block';
-        image.style.opacity = 1;
-        image.style.pointerEvents = '';
-      };
+      const { src } = imagesData[index];
 
       isZoomed = false;
       scale = baseScale;
@@ -189,7 +190,24 @@
       translateY = 0;
       viewer.classList.remove('zoomed');
       thumbnails.classList.remove('hidden');
+
+      image.style.opacity = 0;
+      image.style.pointerEvents = 'none';
+      image.style.display = 'block';
+
+      image.src = src;
+      // fitImageToViewer will run on image load event
     }
+
+    image.addEventListener('load', () => {
+      // Store natural size for the loaded image
+      imagesData[currentImageIndex].naturalWidth = image.naturalWidth;
+      imagesData[currentImageIndex].naturalHeight = image.naturalHeight;
+
+      fitImageToViewer();
+      image.style.opacity = 1;
+      image.style.pointerEvents = '';
+    });
 
     thumbnailImgs.forEach((thumb, i) => {
       thumb.addEventListener('click', () => {
@@ -201,6 +219,8 @@
 
     // Touch & Pointer Support
     let pointers = [];
+    let initialPinchDistance = null;
+    let initialScale = 1;
 
     viewer.addEventListener('pointerdown', e => {
       pointers.push(e);
@@ -224,48 +244,46 @@
       }
 
       if (pointers.length === 2) {
-        const p1 = pointers[0];
-        const p2 = pointers[1];
-
-        // Calculate current distance between pointers
-        const dx = p1.clientX - p2.clientX;
-        const dy = p1.clientY - p2.clientY;
+        const dx = pointers[0].clientX - pointers[1].clientX;
+        const dy = pointers[0].clientY - pointers[1].clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        // Midpoint between the two pointers (pinch center) in viewport coordinates
-        const midX = (p1.clientX + p2.clientX) / 2;
-        const midY = (p1.clientY + p2.clientY) / 2;
+        // Calculate midpoint of two pointers
+        const midX = (pointers[0].clientX + pointers[1].clientX) / 2;
+        const midY = (pointers[0].clientY + pointers[1].clientY) / 2;
 
         if (initialPinchDistance === null) {
           initialPinchDistance = distance;
-          initialMid = { x: midX, y: midY };
           initialScale = scale;
+
+          // Save initial translation and midpoint relative to image
+          const viewerRect = viewer.getBoundingClientRect();
+          const imgX = (midX - viewerRect.left - translateX - (viewerRect.width - image.naturalWidth * scale) / 2) / scale;
+          const imgY = (midY - viewerRect.top - translateY - (viewerRect.height - image.naturalHeight * scale) / 2) / scale;
+
+          initialPinchCenter = { imgX, imgY, clientX: midX, clientY: midY };
         } else {
           let scaleFactor = distance / initialPinchDistance;
           let newScale = initialScale * scaleFactor;
           newScale = Math.max(baseScale * minScaleFactor, Math.min(newScale, baseScale * maxScaleFactor));
 
-          // Calculate the position of the pinch center relative to the image's top-left corner before scaling
+          // Adjust translateX and translateY to zoom into pinch center
           const viewerRect = viewer.getBoundingClientRect();
-          const imageOffsetX = (viewerRect.width - image.naturalWidth * scale) / 2 + translateX;
-          const imageOffsetY = (viewerRect.height - image.naturalHeight * scale) / 2 + translateY;
 
-          const pinchXOnImage = (midX - imageOffsetX) / scale;
-          const pinchYOnImage = (midY - imageOffsetY) / scale;
-
-          // Update scale
+          const prevScale = scale;
           scale = newScale;
 
-          // After scaling, calculate new image offset to keep the pinch point stable
-          const newImageOffsetX = midX - pinchXOnImage * scale;
-          const newImageOffsetY = midY - pinchYOnImage * scale;
+          // Calculate focal point relative to viewer and image
+          const focalX = (initialPinchCenter.clientX - viewerRect.left);
+          const focalY = (initialPinchCenter.clientY - viewerRect.top);
 
-          // Set translateX/Y to new offsets relative to centered position
-          const offsetX = (viewerRect.width - image.naturalWidth * scale) / 2;
-          const offsetY = (viewerRect.height - image.naturalHeight * scale) / 2;
+          // Calculate image coords under the focal point before and after scaling
+          const imgX = (focalX - translateX - (viewerRect.width - image.naturalWidth * prevScale) / 2) / prevScale;
+          const imgY = (focalY - translateY - (viewerRect.height - image.naturalHeight * prevScale) / 2) / prevScale;
 
-          translateX = newImageOffsetX - offsetX;
-          translateY = newImageOffsetY - offsetY;
+          // Update translate to keep the image point under the finger consistent
+          translateX = focalX - imgX * scale - (viewerRect.width - image.naturalWidth * scale) / 2;
+          translateY = focalY - imgY * scale - (viewerRect.height - image.naturalHeight * scale) / 2;
 
           isZoomed = true;
           viewer.classList.add('zoomed');
@@ -287,7 +305,6 @@
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
       if (pointers.length < 2) {
         initialPinchDistance = null;
-        initialMid = null;
       }
       isDragging = false;
     });
@@ -296,7 +313,6 @@
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
       isDragging = false;
       initialPinchDistance = null;
-      initialMid = null;
     });
 
     viewer.addEventListener('click', e => {
@@ -331,9 +347,8 @@
           imagesData[idx] = {
             src,
             naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight
+            naturalHeight: img.naturalHeight,
           };
-          // Load the first image initially
           if (idx === 0) {
             setImage(0);
           }
@@ -341,16 +356,7 @@
       });
     }
 
-    // Preload all large images immediately in background to ensure quick switching
-    function preloadAllLargeImages() {
-      thumbnailImgs.forEach((thumb) => {
-        const img = new Image();
-        img.src = thumb.dataset.src;
-      });
-    }
-
     preloadImages();
-    preloadAllLargeImages();
   </script>
 </body>
 </html>
