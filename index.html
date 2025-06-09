@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Image Viewer</title>
   <style>
     html, body {
@@ -45,7 +45,6 @@
       object-fit: cover;
       cursor: pointer;
       border: 2px solid transparent;
-      outline: none;
     }
 
     .viewer {
@@ -58,10 +57,6 @@
 
     .viewer.zoomed {
       cursor: grab;
-    }
-
-    .viewer.zoomed:active {
-      cursor: grabbing;
     }
 
     .viewer img {
@@ -116,6 +111,10 @@
     const imagesData = [];
     let currentImageIndex = 0;
 
+    let pointers = [];
+    let initialPinchDistance = null;
+    let initialScale = 1;
+
     function clampTranslation() {
       const viewerRect = viewer.getBoundingClientRect();
       const imgWidth = image.naturalWidth * scale;
@@ -164,20 +163,17 @@
       currentImageIndex = index;
       const { src, naturalWidth, naturalHeight } = imagesData[index];
 
-      image.style.opacity = 0;
-      image.style.pointerEvents = 'none';
-      image.style.display = 'none';
-
       const tempImg = new Image();
       tempImg.src = src;
       tempImg.onload = () => {
+        image.style.opacity = 0;
         image.src = src;
-        image.naturalWidth = naturalWidth;
-        image.naturalHeight = naturalHeight;
-        fitImageToViewer();
-        image.style.display = 'block';
-        image.style.opacity = 1;
-        image.style.pointerEvents = '';
+        image.onload = () => {
+          image.naturalWidth = naturalWidth;
+          image.naturalHeight = naturalHeight;
+          fitImageToViewer();
+          image.style.opacity = 1;
+        };
       };
 
       isZoomed = false;
@@ -196,22 +192,19 @@
       });
     });
 
-    // Touch & Pointer Support
-    let pointers = [];
-    let initialPinchDistance = null;
-    let initialScale = 1;
-
     viewer.addEventListener('pointerdown', e => {
       pointers.push(e);
-      if (pointers.length === 1 && isZoomed) {
+      if (pointers.length === 2) {
+        initialPinchDistance = null;
+      } else if (isZoomed) {
         isDragging = true;
         hasDragged = false;
         dragStart.x = e.clientX;
         dragStart.y = e.clientY;
         lastTranslate.x = translateX;
         lastTranslate.y = translateY;
-        viewer.setPointerCapture(e.pointerId);
       }
+      viewer.setPointerCapture(e.pointerId);
     });
 
     viewer.addEventListener('pointermove', e => {
@@ -223,21 +216,45 @@
       }
 
       if (pointers.length === 2) {
-        const dx = pointers[0].clientX - pointers[1].clientX;
-        const dy = pointers[0].clientY - pointers[1].clientY;
+        const [p1, p2] = pointers;
+        const dx = p1.clientX - p2.clientX;
+        const dy = p1.clientY - p2.clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
+
+        const midX = (p1.clientX + p2.clientX) / 2;
+        const midY = (p1.clientY + p2.clientY) / 2;
 
         if (initialPinchDistance === null) {
           initialPinchDistance = distance;
           initialScale = scale;
+
+          const rect = viewer.getBoundingClientRect();
+          const imgX = (midX - rect.left - translateX) / scale;
+          const imgY = (midY - rect.top - translateY) / scale;
+          viewer.dataset.anchorX = imgX;
+          viewer.dataset.anchorY = imgY;
         } else {
           let scaleFactor = distance / initialPinchDistance;
-          scale = initialScale * scaleFactor;
-          scale = Math.max(baseScale * minScaleFactor, Math.min(scale, baseScale * maxScaleFactor));
+          let newScale = initialScale * scaleFactor;
+
+          newScale = Math.max(baseScale * minScaleFactor, Math.min(newScale, baseScale * maxScaleFactor));
+          const prevScale = scale;
+          scale = newScale;
 
           isZoomed = true;
           viewer.classList.add('zoomed');
           thumbnails.classList.add('hidden');
+
+          const anchorX = parseFloat(viewer.dataset.anchorX);
+          const anchorY = parseFloat(viewer.dataset.anchorY);
+
+          const newX = anchorX * scale;
+          const newY = anchorY * scale;
+          const oldX = anchorX * prevScale;
+          const oldY = anchorY * prevScale;
+
+          translateX -= (newX - oldX);
+          translateY -= (newY - oldY);
 
           applyTransform();
         }
@@ -253,26 +270,35 @@
 
     viewer.addEventListener('pointerup', e => {
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
-      if (pointers.length < 2) {
-        initialPinchDistance = null;
-      }
       isDragging = false;
     });
 
     viewer.addEventListener('pointercancel', e => {
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
       isDragging = false;
-      initialPinchDistance = null;
     });
 
     viewer.addEventListener('click', e => {
-      if (hasDragged || pointers.length > 1) return;
+      if (hasDragged) return;
+
+      const rect = viewer.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const imgX = (clickX - translateX) / scale;
+      const imgY = (clickY - translateY) / scale;
 
       if (!isZoomed) {
         isZoomed = true;
         scale = baseScale * clickZoomFactor;
-        translateX = 0;
-        translateY = 0;
+
+        const newOffsetX = clickX - imgX * scale;
+        const newOffsetY = clickY - imgY * scale;
+
+        translateX = newOffsetX;
+        translateY = newOffsetY;
+
+        clampTranslation();
         viewer.classList.add('zoomed');
         thumbnails.classList.add('hidden');
       } else {
@@ -300,7 +326,7 @@
             naturalHeight: img.naturalHeight
           };
           if (idx === 0) {
-            setImage(0);
+            setImage(0); // Show first image when loaded
           }
         };
       });
