@@ -1,351 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Image Viewer</title>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background-color: #000;
-      font-family: sans-serif;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-      background-color: #000;
-    }
-
-    .thumbnails {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      padding: 10px;
-      background-color: #000;
-      z-index: 10;
-      transition: opacity 0.3s ease;
-    }
-
-    .thumbnails.hidden {
-      opacity: 0;
-      pointer-events: none;
-      height: 0;
-      padding: 0;
-      margin: 0;
-      overflow: hidden;
-    }
-
-    .thumbnails img {
-      width: 100px;
-      height: 70px;
-      object-fit: cover;
-      cursor: pointer;
-      border: 2px solid transparent;
-      outline: none;
-    }
-
-    .viewer {
-      position: relative;
-      flex: 1;
-      background-color: #000;
-      overflow: hidden;
-      cursor: zoom-in;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .viewer.zoomed {
-      cursor: grab;
-    }
-
-    .viewer.zoomed:active {
-      cursor: grabbing;
-    }
-
-    .viewer img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      transform-origin: top left;
-      pointer-events: none;
-      max-width: none;
-      user-select: none;
-      transition: opacity 0.3s ease;
-      opacity: 0;
-      display: none;
-      will-change: transform, opacity;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Image Viewer</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%; background: black; overflow: hidden;
+    font-family: sans-serif;
+    color: white;
+  }
+  .container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .thumbnails {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    background: black;
+    padding: 10px;
+    z-index: 10;
+  }
+  .thumbnails img {
+    width: 100px;
+    height: 70px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 2px solid transparent;
+  }
+  .viewer {
+    flex: 1;
+    position: relative;
+    background: black;
+    overflow: hidden;
+    cursor: zoom-in;
+  }
+  .viewer.zoomed {
+    cursor: grab;
+  }
+  .viewer.zoomed:active {
+    cursor: grabbing;
+  }
+  .viewer img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center center;
+    max-width: none;
+    max-height: none;
+    user-select: none;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .viewer img.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="thumbnails" id="thumbnails">
-      <img src="images/photo1.jpg" data-src="images/photo1.jpg" alt="1" />
-      <img src="images/photo2.jpg" data-src="images/photo2.jpg" alt="2" />
-      <img src="images/photo3.jpg" data-src="images/photo3.jpg" alt="3" />
-      <img src="images/photo4.jpg" data-src="images/photo4.jpg" alt="4" />
-      <img src="images/photo5.jpg" data-src="images/photo5.jpg" alt="5" />
-      <img src="images/photo6.jpg" data-src="images/photo6.jpg" alt="6" />
-    </div>
-    <div class="viewer" id="viewer">
-      <img id="mainImage" src="" alt="Main View" />
-    </div>
+<div class="container">
+  <div class="thumbnails" id="thumbnails">
+    <img src="images/thumbnail1.jpg" data-full="images/photo1.jpg" alt="1" />
+    <img src="images/thumbnail2.jpg" data-full="images/photo2.jpg" alt="2" />
+    <img src="images/thumbnail3.jpg" data-full="images/photo3.jpg" alt="3" />
+    <img src="images/thumbnail4.jpg" data-full="images/photo4.jpg" alt="4" />
+    <img src="images/thumbnail5.jpg" data-full="images/photo5.jpg" alt="5" />
+    <img src="images/thumbnail6.jpg" data-full="images/photo6.jpg" alt="6" />
   </div>
+  <div class="viewer" id="viewer">
+    <img id="imageA" />
+    <img id="imageB" />
+  </div>
+</div>
 
-  <script>
-    const viewer = document.getElementById('viewer');
-    const image = document.getElementById('mainImage');
-    const thumbnails = document.getElementById('thumbnails');
-    const thumbnailImgs = thumbnails.querySelectorAll('img');
+<script>
+  const viewer = document.getElementById('viewer');
+  const imgA = document.getElementById('imageA');
+  const imgB = document.getElementById('imageB');
+  const thumbnails = document.getElementById('thumbnails');
+  const thumbnailImgs = thumbnails.querySelectorAll('img');
 
-    let baseScale = 1;
-    let scale = 1;
-    const clickZoomFactor = 2.0;
-    const minScaleFactor = 1.6;
-    const maxScaleFactor = 10;
+  let visibleImg = imgA;
+  let hiddenImg = imgB;
 
-    let translateX = 0;
-    let translateY = 0;
-    let isZoomed = false;
+  let scale = 1;
+  let baseScale = 1;
+  let translateX = 0;
+  let translateY = 0;
+  let isZoomed = false;
 
-    let isDragging = false;
-    let hasDragged = false;
-    let dragStart = { x: 0, y: 0 };
-    let lastTranslate = { x: 0, y: 0 };
+  let isDragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let lastTranslate = { x: 0, y: 0 };
 
-    const imagesData = [];
-    let currentImageIndex = 0;
+  function clampTranslation(img, s, tx, ty) {
+    const rect = viewer.getBoundingClientRect();
+    const iw = img.naturalWidth * s;
+    const ih = img.naturalHeight * s;
+    const maxX = Math.max(0, (iw - rect.width) / 2);
+    const maxY = Math.max(0, (ih - rect.height) / 2);
+    return {
+      x: Math.min(maxX, Math.max(-maxX, tx)),
+      y: Math.min(maxY, Math.max(-maxY, ty)),
+    };
+  }
 
-    function clampTranslation() {
-      const viewerRect = viewer.getBoundingClientRect();
-      const imgWidth = image.naturalWidth * scale;
-      const imgHeight = image.naturalHeight * scale;
+  function applyTransform(img, s, tx, ty) {
+    img.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(${s})`;
+  }
 
-      const maxTranslateX = Math.max(0, (imgWidth - viewerRect.width) / 2);
-      const maxTranslateY = Math.max(0, (imgHeight - viewerRect.height) / 2);
+  function fitImage(img) {
+    const rect = viewer.getBoundingClientRect();
+    if (!img.naturalWidth || !img.naturalHeight) return;
 
-      translateX = Math.min(maxTranslateX, Math.max(-maxTranslateX, translateX));
-      translateY = Math.min(maxTranslateY, Math.max(-maxTranslateY, translateY));
-    }
+    const scaleX = rect.width / img.naturalWidth;
+    const scaleY = rect.height / img.naturalHeight;
 
-    function applyTransform() {
-      clampTranslation();
-      const viewerRect = viewer.getBoundingClientRect();
-      const offsetX = (viewerRect.width - image.naturalWidth * scale) / 2;
-      const offsetY = (viewerRect.height - image.naturalHeight * scale) / 2;
-      const x = offsetX + translateX;
-      const y = offsetY + translateY;
-      image.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
-    }
+    baseScale = Math.min(scaleX, scaleY);
+    scale = baseScale;
+    translateX = 0;
+    translateY = 0;
+    applyTransform(img, scale, translateX, translateY);
+  }
 
-    function fitImageToViewer() {
-      const viewerRect = viewer.getBoundingClientRect();
-      const iw = image.naturalWidth;
-      const ih = image.naturalHeight;
-      if (iw === 0 || ih === 0) return;
+  function setImage(src) {
+    hiddenImg.style.opacity = 0;
+    hiddenImg.src = src;
 
-      const scaleX = viewerRect.width / iw;
-      const scaleY = viewerRect.height / ih;
+    hiddenImg.onload = () => {
+      fitImage(hiddenImg);
 
-      baseScale = Math.min(scaleX, scaleY);
+      visibleImg.classList.remove('visible');
+      hiddenImg.classList.add('visible');
+
       scale = baseScale;
       translateX = 0;
       translateY = 0;
       isZoomed = false;
       viewer.classList.remove('zoomed');
-      thumbnails.classList.remove('hidden');
 
-      applyTransform();
-    }
+      [visibleImg, hiddenImg] = [hiddenImg, visibleImg];
+    };
+    hiddenImg.onerror = () => {
+      console.error('Failed to load image:', src);
+    };
+  }
 
-    async function setImage(index) {
-      if (!imagesData[index]) return;
-      currentImageIndex = index;
-      const { src, naturalWidth, naturalHeight } = imagesData[index];
+  thumbnailImgs.forEach((thumb) => {
+    thumb.addEventListener('click', () => {
+      const fullSrc = thumb.dataset.full;
+      setImage(fullSrc);
+    });
+  });
 
-      // Hide image and keep black background
-      image.style.opacity = 0;
-      image.style.pointerEvents = 'none';
-      image.style.display = 'none';
+  viewer.addEventListener('click', (e) => {
+    if (isDragging) return;
 
-      const tempImg = new Image();
-      tempImg.src = src;
+    const rect = viewer.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
 
-      try {
-        await tempImg.decode();
-      } catch {
-        // fallback for browsers without decode support
-        await new Promise((resolve) => {
-          tempImg.onload = resolve;
-          tempImg.onerror = resolve;
-        });
-      }
+    const img = visibleImg;
+    if (!img.naturalWidth) return;
 
-      // Set image src and natural sizes
-      image.src = src;
-      image.naturalWidth = naturalWidth;
-      image.naturalHeight = naturalHeight;
+    if (!isZoomed) {
+      isZoomed = true;
+      viewer.classList.add('zoomed');
 
-      fitImageToViewer();
+      const clickRelX = clickX - rect.width / 2 - translateX;
+      const clickRelY = clickY - rect.height / 2 - translateY;
 
-      // Show image smoothly
-      image.style.display = 'block';
-      requestAnimationFrame(() => {
-        image.style.opacity = 1;
-        image.style.pointerEvents = '';
-      });
+      const zoomFactor = 2;
+      scale = baseScale * zoomFactor;
 
+      translateX = translateX - clickRelX * (zoomFactor - 1);
+      translateY = translateY - clickRelY * (zoomFactor - 1);
+
+      const clamped = clampTranslation(img, scale, translateX, translateY);
+      translateX = clamped.x;
+      translateY = clamped.y;
+    } else {
       isZoomed = false;
+      viewer.classList.remove('zoomed');
       scale = baseScale;
       translateX = 0;
       translateY = 0;
-      viewer.classList.remove('zoomed');
-      thumbnails.classList.remove('hidden');
     }
 
-    thumbnailImgs.forEach((thumb, i) => {
-      thumb.addEventListener('click', () => {
-        if (currentImageIndex !== i) {
-          setImage(i);
-        }
-      });
-    });
+    applyTransform(img, scale, translateX, translateY);
+  });
 
-    viewer.addEventListener('mousedown', e => {
-      if (!isZoomed) return;
-      isDragging = true;
-      hasDragged = false;
-      dragStart.x = e.clientX;
-      dragStart.y = e.clientY;
-      lastTranslate.x = translateX;
-      lastTranslate.y = translateY;
-      viewer.style.cursor = 'grabbing';
-      e.preventDefault();
-    });
+  viewer.addEventListener('mousedown', (e) => {
+    if (!isZoomed) return;
+    isDragging = true;
+    dragStart.x = e.clientX;
+    dragStart.y = e.clientY;
+    lastTranslate.x = translateX;
+    lastTranslate.y = translateY;
+    viewer.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
 
-    viewer.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-      hasDragged = true;
-      const dx = e.clientX - dragStart.x;
-      const dy = e.clientY - dragStart.y;
-      translateX = lastTranslate.x + dx;
-      translateY = lastTranslate.y + dy;
-      applyTransform();
-    });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
 
-    viewer.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        viewer.style.cursor = 'grab';
-      }
-    });
+    translateX = lastTranslate.x + dx;
+    translateY = lastTranslate.y + dy;
 
-    viewer.addEventListener('mouseleave', () => {
-      if (isDragging) {
-        isDragging = false;
-        viewer.style.cursor = 'grab';
-      }
-    });
+    const clamped = clampTranslation(visibleImg, scale, translateX, translateY);
+    translateX = clamped.x;
+    translateY = clamped.y;
 
-    viewer.addEventListener('click', e => {
-      if (hasDragged) return;
+    applyTransform(visibleImg, scale, translateX, translateY);
+  });
 
-      const rect = viewer.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+  window.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      viewer.style.cursor = 'grab';
+    }
+  });
 
-      const imgX = (clickX - (viewer.clientWidth - image.naturalWidth * scale) / 2 - translateX) / scale;
-      const imgY = (clickY - (viewer.clientHeight - image.naturalHeight * scale) / 2 - translateY) / scale;
+  viewer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (!visibleImg.naturalWidth) return;
 
-      if (!isZoomed) {
-        isZoomed = true;
-        scale = baseScale * clickZoomFactor;
+    const rect = viewer.getBoundingClientRect();
+    const cursorX = e.clientX - rect.left;
+    const cursorY = e.clientY - rect.top;
 
-        const newOffsetX = clickX - imgX * scale;
-        const newOffsetY = clickY - imgY * scale;
+    const zoomStep = 0.1;
+    let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
+    const minScale = baseScale * 1.6;
+    const maxScale = baseScale * 10;
 
-        translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
-        translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
+    newScale = Math.min(Math.max(newScale, minScale), maxScale);
+    if (newScale === scale) return;
 
-        clampTranslation();
-        viewer.classList.add('zoomed');
-        thumbnails.classList.add('hidden');
-      } else {
-        isZoomed = false;
-        scale = baseScale;
-        translateX = 0;
-        translateY = 0;
-        viewer.classList.remove('zoomed');
-        thumbnails.classList.remove('hidden');
-      }
-      applyTransform();
-    });
-
-    viewer.addEventListener('wheel', e => {
-      e.preventDefault();
-      if (!image.naturalWidth || !image.naturalHeight) return;
-
-      const rect = viewer.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const cursorY = e.clientY - rect.top;
-
-      const zoomStep = 0.1;
-      let newScale = scale - (e.deltaY > 0 ? zoomStep : -zoomStep) * scale;
-      const minScale = baseScale * minScaleFactor;
-
-      newScale = Math.min(Math.max(newScale, minScale), baseScale * maxScaleFactor);
-      if (newScale === scale) return;
-
-      if (!isZoomed) {
-        isZoomed = true;
-        viewer.classList.add('zoomed');
-        thumbnails.classList.add('hidden');
-      }
-
-      const offsetX = (viewer.clientWidth - image.naturalWidth * scale) / 2 + translateX;
-      const offsetY = (viewer.clientHeight - image.naturalHeight * scale) / 2 + translateY;
-
-      const imgCoordX = (cursorX - offsetX) / scale;
-      const imgCoordY = (cursorY - offsetY) / scale;
-
-      scale = newScale;
-
-      const newOffsetX = cursorX - imgCoordX * scale;
-      const newOffsetY = cursorY - imgCoordY * scale;
-
-      translateX = newOffsetX - (viewer.clientWidth - image.naturalWidth * scale) / 2;
-      translateY = newOffsetY - (viewer.clientHeight - image.naturalHeight * scale) / 2;
-
-      applyTransform();
-    });
-
-    window.addEventListener('resize', fitImageToViewer);
-
-    function preloadImages() {
-      thumbnailImgs.forEach((thumb, idx) => {
-        const src = thumb.dataset.src;
-        const img = new Image();
-        img.src = src;
-        img.onload = () => {
-          imagesData[idx] = {
-            src,
-            naturalWidth: img.naturalWidth,
-            naturalHeight: img.naturalHeight
-          };
-          if (idx === 0) {
-            setImage(0); // Show first image when loaded
-          }
-        };
-      });
+    if (!isZoomed) {
+      isZoomed = true;
+      viewer.classList.add('zoomed');
     }
 
-    preloadImages();
-  </script>
+    const offsetX = rect.width / 2 + translateX;
+    const offsetY = rect.height / 2 + translateY;
+
+    const imgCoordX = (cursorX - offsetX) / scale;
+    const imgCoordY = (cursorY - offsetY) / scale;
+
+    scale = newScale;
+    translateX = cursorX - imgCoordX * scale - rect.width / 2;
+    translateY = cursorY - imgCoordY * scale - rect.height / 2;
+
+    const clamped = clampTranslation(visibleImg, scale, translateX, translateY);
+    translateX = clamped.x;
+    translateY = clamped.y;
+
+    applyTransform(visibleImg, scale, translateX, translateY);
+  });
+
+  window.addEventListener('resize', () => {
+    fitImage(visibleImg);
+    scale = baseScale;
+    translateX = 0;
+    translateY = 0;
+    isZoomed = false;
+    viewer.classList.remove('zoomed');
+    applyTransform(visibleImg, scale, translateX, translateY);
+  });
+</script>
 </body>
 </html>
