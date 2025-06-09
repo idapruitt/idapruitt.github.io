@@ -113,6 +113,9 @@
     let dragStart = { x: 0, y: 0 };
     let lastTranslate = { x: 0, y: 0 };
 
+    let initialPinchDistance = null;
+    let initialMid = null;
+
     const imagesData = [];
     let currentImageIndex = 0;
 
@@ -198,8 +201,6 @@
 
     // Touch & Pointer Support
     let pointers = [];
-    let initialPinchDistance = null;
-    let initialScale = 1;
 
     viewer.addEventListener('pointerdown', e => {
       pointers.push(e);
@@ -223,17 +224,48 @@
       }
 
       if (pointers.length === 2) {
-        const dx = pointers[0].clientX - pointers[1].clientX;
-        const dy = pointers[0].clientY - pointers[1].clientY;
+        const p1 = pointers[0];
+        const p2 = pointers[1];
+
+        // Calculate current distance between pointers
+        const dx = p1.clientX - p2.clientX;
+        const dy = p1.clientY - p2.clientY;
         const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Midpoint between the two pointers (pinch center) in viewport coordinates
+        const midX = (p1.clientX + p2.clientX) / 2;
+        const midY = (p1.clientY + p2.clientY) / 2;
 
         if (initialPinchDistance === null) {
           initialPinchDistance = distance;
+          initialMid = { x: midX, y: midY };
           initialScale = scale;
         } else {
           let scaleFactor = distance / initialPinchDistance;
-          scale = initialScale * scaleFactor;
-          scale = Math.max(baseScale * minScaleFactor, Math.min(scale, baseScale * maxScaleFactor));
+          let newScale = initialScale * scaleFactor;
+          newScale = Math.max(baseScale * minScaleFactor, Math.min(newScale, baseScale * maxScaleFactor));
+
+          // Calculate the position of the pinch center relative to the image's top-left corner before scaling
+          const viewerRect = viewer.getBoundingClientRect();
+          const imageOffsetX = (viewerRect.width - image.naturalWidth * scale) / 2 + translateX;
+          const imageOffsetY = (viewerRect.height - image.naturalHeight * scale) / 2 + translateY;
+
+          const pinchXOnImage = (midX - imageOffsetX) / scale;
+          const pinchYOnImage = (midY - imageOffsetY) / scale;
+
+          // Update scale
+          scale = newScale;
+
+          // After scaling, calculate new image offset to keep the pinch point stable
+          const newImageOffsetX = midX - pinchXOnImage * scale;
+          const newImageOffsetY = midY - pinchYOnImage * scale;
+
+          // Set translateX/Y to new offsets relative to centered position
+          const offsetX = (viewerRect.width - image.naturalWidth * scale) / 2;
+          const offsetY = (viewerRect.height - image.naturalHeight * scale) / 2;
+
+          translateX = newImageOffsetX - offsetX;
+          translateY = newImageOffsetY - offsetY;
 
           isZoomed = true;
           viewer.classList.add('zoomed');
@@ -255,6 +287,7 @@
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
       if (pointers.length < 2) {
         initialPinchDistance = null;
+        initialMid = null;
       }
       isDragging = false;
     });
@@ -263,6 +296,7 @@
       pointers = pointers.filter(p => p.pointerId !== e.pointerId);
       isDragging = false;
       initialPinchDistance = null;
+      initialMid = null;
     });
 
     viewer.addEventListener('click', e => {
@@ -299,6 +333,7 @@
             naturalWidth: img.naturalWidth,
             naturalHeight: img.naturalHeight
           };
+          // Load the first image initially
           if (idx === 0) {
             setImage(0);
           }
@@ -306,7 +341,16 @@
       });
     }
 
+    // Preload all large images immediately in background to ensure quick switching
+    function preloadAllLargeImages() {
+      thumbnailImgs.forEach((thumb) => {
+        const img = new Image();
+        img.src = thumb.dataset.src;
+      });
+    }
+
     preloadImages();
+    preloadAllLargeImages();
   </script>
 </body>
 </html>
