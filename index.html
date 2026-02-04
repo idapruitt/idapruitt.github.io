@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #58ab3c;
+      background: #0f0f14;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -44,6 +44,15 @@
       border-radius: 16px;
       min-height: 72px;
     }
+    .symbol {
+      font-size: 2rem;
+      display: inline-block;
+      margin: 0 0.1rem;
+    }
+    .heart { color: #ff4d6d; }
+    .star { color: #ffd700; }
+    .triangle { color: #00ffff; }
+    .xmark { color: #ffffff; }
     .meta {
       margin-top: 8px;
       opacity: 0.6;
@@ -53,7 +62,7 @@
 </head>
 <body>
   <h1>Pattern Generator Playground</h1>
-  <p>Generators express intent. Classifier expresses perception. Symbols are 1–4, length 2–10.</p>
+  <p>Generators express intent. Classifier expresses perception. Symbols are ♥, ★, ▲, ✖, length 2–10.</p>
 
   <div class="controls">
     <button onclick="run('uniform')">Uniform</button>
@@ -74,21 +83,34 @@
   <div class="meta" id="meta"></div>
 
 <script>
-  const SYMBOLS = ['1','2','3','4'];
+  const SYMBOLS = [
+    { char: '♥', class: 'heart' },
+    { char: '★', class: 'star' },
+    { char: '▲', class: 'triangle' },
+    { char: '✖', class: 'xmark' }
+  ];
+
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function choice(arr) { return arr[randInt(0, arr.length - 1)]; }
   function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = randInt(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 
+  function mapSymbols(chars) {
+    return chars.map(c => {
+      const sym = SYMBOLS[c];
+      return `<span class='symbol ${sym.class}'>${sym.char}</span>`;
+    }).join('');
+  }
+
   // ================= Generators =================
-  function genUniform(len) { const s = choice(SYMBOLS); return s.repeat(len); }
-  function genAlternating(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = choice(SYMBOLS); let b; do { b = choice(SYMBOLS); } while (b === a); let out = ''; for (let i = 0; i < len; i++) out += (i % 2 === 0 ? a : b); return out; }
-  function genSymmetric(len) { const half = Math.ceil(len / 2); let left = ''; for (let i = 0; i < half; i++) left += choice(SYMBOLS); const right = left.slice(0, len / 2).split('').reverse().join(''); return left + right; }
-  function genRepeating(len) { const motifLen = Math.random() < 0.5 ? 3 : 4; const minLen = motifLen * 2; if (len < minLen) len = minLen; len = Math.floor(len / motifLen) * motifLen; let motif = ''; for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS); let out = ''; while (out.length < len) out += motif; return out; }
-  function genDominant(len) { const dom = choice(SYMBOLS); let out = ''; for (let i = 0; i < len; i++) out += (Math.random() < 0.65 ? dom : choice(SYMBOLS.filter(s => s !== dom))); return out; }
-  function genChaotic(len) { let out = ''; for (let i = 0; i < len; i++) out += choice(SYMBOLS); return out; }
-  function genEqual(n) { let chars = shuffle(SYMBOLS.slice()).slice(0, n); const repeatCount = randInt(2, 3); let arr = []; for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars); return shuffle(arr).join(''); }
-  function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s; } return out.slice(0, len); }
-  function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = ''; for (let i = 0; i < tripleCount; i++) out += choice(SYMBOLS).repeat(3); return out; }
+  function genUniform(len) { const s = randInt(0,3); return Array(len).fill(s); }
+  function genAlternating(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = randInt(0,3); let b; do { b = randInt(0,3); } while (b === a); let out = []; for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b); return out; }
+  function genSymmetric(len) { const half = Math.ceil(len / 2); let left = []; for (let i = 0; i < half; i++) left.push(randInt(0,3)); const right = left.slice(0, len / 2).reverse(); return left.concat(right); }
+  function genRepeating(len) { const motifLen = Math.random() < 0.5 ? 3 : 4; const minLen = motifLen * 2; if (len < minLen) len = minLen; len = Math.floor(len / motifLen) * motifLen; let motif = []; for (let i = 0; i < motifLen; i++) motif.push(randInt(0,3)); let out = []; while (out.length < len) out = out.concat(motif); return out.slice(0,len); }
+  function genDominant(len) { const dom = randInt(0,3); let out = []; for (let i = 0; i < len; i++) out.push(Math.random() < 0.65 ? dom : randInt(0,3)); return out; }
+  function genChaotic(len) { let out = []; for (let i = 0; i < len; i++) out.push(randInt(0,3)); return out; }
+  function genEqual(n) { let chars = shuffle([0,1,2,3]).slice(0,n); const repeatCount = randInt(2,3); let arr = []; for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars); return shuffle(arr).slice(0,n*repeatCount); }
+  function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = []; while (out.length < len) { const s = randInt(0,3); out.push(s,s); } return out.slice(0,len); }
+  function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = []; for (let i = 0; i < tripleCount; i++) out = out.concat(Array(3).fill(randInt(0,3))); return out.slice(0,len); }
   function genBlock(len) {
     if (len < 4) len = 4;
     let numBlocks = randInt(2, Math.min(4, len / 2));
@@ -100,98 +122,83 @@
       remaining -= size;
     }
     blockSizes.push(remaining);
-    let usedChars = shuffle(SYMBOLS.slice());
-    let out = '';
+    let usedChars = shuffle([0,1,2,3]);
+    let out = [];
     for (let i = 0; i < blockSizes.length; i++) {
-      out += usedChars[i % usedChars.length].repeat(blockSizes[i]);
+      out = out.concat(Array(blockSizes[i]).fill(usedChars[i % usedChars.length]));
     }
     return out;
   }
 
   // ================= Classifier =================
   function classify(seq) {
-    const chars = seq.split('');
-    const len = chars.length;
+    const len = seq.length;
     const tags = [];
     const counts = {};
-    for (const c of chars) counts[c] = (counts[c] || 0) + 1;
+    seq.forEach(c => counts[c] = (counts[c] || 0) + 1);
     const uniqueCount = Object.keys(counts).length;
     const maxCount = Math.max(...Object.values(counts));
 
     if (uniqueCount === 1) { tags.push('uniform'); tags.push('dominant'); }
     else { if (maxCount / len >= 0.6) tags.push('dominant'); }
 
-    const reversed = chars.slice().reverse().join('');
-    if (seq === reversed) tags.push('symmetric');
+    if (seq.join('') === seq.slice().reverse().join('')) tags.push('symmetric');
 
     let alternating = true;
-    for (let i = 2; i < len; i++) { if (chars[i] !== chars[i - 2]) { alternating = false; break; } }
+    for (let i = 2; i < len; i++) if (seq[i] !== seq[i-2]) { alternating = false; break; }
     if (alternating && len % 2 === 0 && len >= 4) tags.push('alternating');
 
-    for (let size of [3, 4]) {
-      if (len < size * 2) continue;
+    for (let size of [3,4]) {
+      if (len < size*2) continue;
       if (len % size !== 0) continue;
-      const motif = chars.slice(0, size).join('');
-      if (motif.repeat(len / size) === seq) { tags.push('repeating'); break; }
+      if (seq.slice(0,size).join('').repeat(len/size) === seq.join('')) { tags.push('repeating'); break; }
     }
 
-    const equalCounts = Object.values(counts).every(c => c === counts[chars[0]]);
+    const equalCounts = Object.values(counts).every(c => c === counts[seq[0]]);
     if (uniqueCount === 2 && equalCounts) tags.push('equal2');
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
-    // Detect pairs, triples, and in a row sequences
-    let i = 0;
-    let pairCount = 0;
-    let tripleCount = 0;
-    while (i < len) {
+    let i = 0, pairCount=0, tripleCount=0;
+    while(i < len){
       let count = 1;
-      while (i + count < len && chars[i + count] === chars[i]) count++;
-      if (count >= 2) pairCount += Math.floor(count / 2);
-      if (count >= 3) tripleCount += Math.floor(count / 3);
-      for (let n = 4; n <= count; n++) tags.push(n + 'inarow');
+      while(i+count<len && seq[i+count]===seq[i]) count++;
+      if(count>=2) pairCount += Math.floor(count/2);
+      if(count>=3) tripleCount += Math.floor(count/3);
+      for(let n=4;n<=count;n++) tags.push(n+'inarow');
       i += count;
     }
-    if (pairCount > 0) tags.push(pairCount + 'pair');
-    if (tripleCount > 0) tags.push(tripleCount + 'triple');
+    if(pairCount>0) tags.push(pairCount+'pair');
+    if(tripleCount>0) tags.push(tripleCount+'triple');
 
-    // Detect block pattern
-    const minRun = 2;
-    let runs = [];
-    i = 0;
-    while (i < len) {
-      let count = 1;
-      while (i + count < len && chars[i + count] === chars[i]) count++;
-      runs.push(count);
-      i += count;
+    const minRun=2; let runs=[]; i=0;
+    while(i<len){
+      let count=1; while(i+count<len && seq[i+count]===seq[i]) count++; runs.push(count); i+=count;
     }
-    if (runs.every(r => r >= minRun) && uniqueCount >= 2) tags.push('block');
-
-    if (!tags.some(t => ['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic','block'].includes(t))) tags.push('chaotic');
-
+    if(runs.every(r=>r>=minRun)&&uniqueCount>=2) tags.push('block');
+    if(!tags.some(t=>['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic','block'].includes(t))) tags.push('chaotic');
     return tags;
   }
 
   // ================= Dispatch =================
-  function run(type) {
-    let len = randInt(2, 10);
-    let seq;
+  function run(type){
+    let len=randInt(2,10); let seq;
     switch(type){
-      case 'uniform': seq = genUniform(len); break;
-      case 'alternating': seq = genAlternating(len); break;
-      case 'symmetric': seq = genSymmetric(len); break;
-      case 'repeating': seq = genRepeating(len); break;
-      case 'dominant': seq = genDominant(len); break;
-      case 'chaotic': seq = genChaotic(len); break;
-      case 'equal2': seq = genEqual(2); break;
-      case 'equal3': seq = genEqual(3); break;
-      case 'equal4': seq = genEqual(4); break;
-      case 'pairs': seq = genPairs(len); break;
-      case 'triples': seq = genTriples(len); break;
-      case 'block': seq = genBlock(len); break;
+      case 'uniform': seq=genUniform(len); break;
+      case 'alternating': seq=genAlternating(len); break;
+      case 'symmetric': seq=genSymmetric(len); break;
+      case 'repeating': seq=genRepeating(len); break;
+      case 'dominant': seq=genDominant(len); break;
+      case 'chaotic': seq=genChaotic(len); break;
+      case 'equal2': seq=genEqual(2); break;
+      case 'equal3': seq=genEqual(3); break;
+      case 'equal4': seq=genEqual(4); break;
+      case 'pairs': seq=genPairs(len); break;
+      case 'triples': seq=genTriples(len); break;
+      case 'block': seq=genBlock(len); break;
     }
-    const perceived = classify(seq);
-    document.getElementById('output').textContent = seq.split('').join(' ');
+    const perceived=classify(seq);
+    document.getElementById('output').innerHTML = mapSymbols(seq);
     document.getElementById('meta').textContent = `intent: ${type} | perceived: ${perceived.join(', ')}`;
   }
 </script>
