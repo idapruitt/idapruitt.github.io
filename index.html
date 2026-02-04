@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #ab753c;
+      background: #3caba3;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -142,7 +142,7 @@
       tags.push('uniform');
       tags.push('dominant');
     } else {
-      if (len >= 4 && maxCount / len >= 0.6) tags.push('dominant');
+      if (maxCount / len >= 0.6) tags.push('dominant');
     }
 
     // symmetric
