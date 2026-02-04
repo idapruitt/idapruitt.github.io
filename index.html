@@ -396,6 +396,35 @@ window.addEventListener('DOMContentLoaded', () => {
 
 })
 
+// ---------- Manual input handler ----------
+document.getElementById('manual-submit').onclick = () => {
+  const input = document.getElementById('manual-input').value.trim()
+  if (!input) return
+
+  // parse string to numeric sequence (0-3)
+  const seq = []
+  for (let ch of input) {
+    const n = Number(ch)
+    if (n >= 1 && n <= 4) seq.push(n - 1)
+  }
+
+  if (!seq.length) return alert('Invalid input: use digits 1-4 only')
+
+  // render same as generator/responses
+  const renderSymbols = seq => seq.map(c => {
+    const s = RESPONSE_SYMBOLS[c]
+    return `<div class="symbol-container">
+              <span class="symbol ${s.class}">${s.char}</span>
+              <span class="number">${c+1}</span>
+            </div>`
+  }).join('')
+
+  const result = classify(seq)
+
+  document.getElementById('manual-output').innerHTML = renderSymbols(seq)
+  document.getElementById('manual-meta').textContent =
+    `manual input | perceived: ${result.tags.join(', ')} | symbols: ${[...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))].join(', ')} | length: ${seq.length}`
+}
 
 
 </script>
@@ -415,6 +444,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <div class="output" id="response-output"></div>
 <div class="meta" id="response-meta"></div>
+
+<div class="controls">
+  <input type="text" id="manual-input" placeholder="Enter sequence using 1-4" style="padding:8px; border-radius:8px; width:200px;" />
+  <button id="manual-submit">Submit Manual Response</button>
+</div>
+
+<div class="output" id="manual-output"></div>
+<div class="meta" id="manual-meta"></div>
+
 
 </body>
 
