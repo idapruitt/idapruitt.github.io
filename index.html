@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #ab3c9c;
+      background: #3c3cab;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -76,6 +76,14 @@
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function choice(arr) { return arr[randInt(0, arr.length - 1)]; }
 
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randInt(0, i);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   function genUniform(len) { const s = choice(SYMBOLS); return s.repeat(len); }
 
   function genAlternating(len) {
@@ -117,10 +125,10 @@
 
   function genEqual(n) {
     const chars = SYMBOLS.slice(0, n);
-    const repeatCount = randInt(2, 3); // random number of repeats for variety
-    let out = '';
-    for (let i = 0; i < repeatCount; i++) out += chars.join('');
-    return out;
+    const repeatCount = randInt(2, 3);
+    let arr = [];
+    for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars);
+    return shuffle(arr).join('');
   }
 
   function classify(seq) {
