@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #42f581;
+  background: #918313;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -285,51 +285,67 @@ function run(type){
 
 
 /* ===============================
-   RESPONSE GENERATOR (SAFE MODE)
+   RESPONSE GENERATOR — HARD SAFE
    =============================== */
 
-/* --- extract numeric sequence from rendered output --- */
-function readCurrentSequence() {
-  const nodes = document.querySelectorAll('#output .number')
-  return Array.from(nodes).map(n => parseInt(n.textContent, 10) - 1)
-}
+window.addEventListener('DOMContentLoaded', () => {
 
-/* --- render response using existing system --- */
-function renderResponse(seq, intent) {
-  if (!seq || !seq.length) return
-
-  const result = classify(seq)
-
-  document.getElementById('response-output').innerHTML = mapSymbols(seq)
-  document.getElementById('response-meta').textContent =
-    `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
-}
-
-/* --- utils --- */
-function shuffleArray(arr) {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+  function readCurrentSequence() {
+    const nodes = document.querySelectorAll('#output .number')
+    if (!nodes.length) {
+      console.warn('No source pattern found')
+      return null
+    }
+    return Array.from(nodes).map(n => Number(n.textContent) - 1)
   }
-  return a
-}
 
-/* --- buttons --- */
-document.getElementById('resp-copy').onclick = () => {
-  const seq = readCurrentSequence()
-  renderResponse(seq, 'response-copy')
-}
+  function renderResponse(seq, intent) {
+    if (!seq || !seq.length) return
 
-document.getElementById('resp-reverse').onclick = () => {
-  const seq = readCurrentSequence()
-  renderResponse([...seq].reverse(), 'response-reverse')
-}
+    const result = classify(seq)
 
-document.getElementById('resp-scramble').onclick = () => {
-  const seq = readCurrentSequence()
-  renderResponse(shuffleArray(seq), 'response-scramble')
-}
+    const out = document.getElementById('response-output')
+    const meta = document.getElementById('response-meta')
+
+    out.innerHTML = mapSymbols(seq)
+    meta.textContent =
+      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
+  }
+
+  function shuffleArray(arr) {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+
+  const copyBtn = document.getElementById('resp-copy')
+  const revBtn  = document.getElementById('resp-reverse')
+  const scrBtn  = document.getElementById('resp-scramble')
+
+  if (!copyBtn || !revBtn || !scrBtn) {
+    console.error('Response buttons not found in DOM')
+    return
+  }
+
+  copyBtn.onclick = () => {
+    const seq = readCurrentSequence()
+    renderResponse(seq, 'response-copy')
+  }
+
+  revBtn.onclick = () => {
+    const seq = readCurrentSequence()
+    renderResponse(seq && [...seq].reverse(), 'response-reverse')
+  }
+
+  scrBtn.onclick = () => {
+    const seq = readCurrentSequence()
+    renderResponse(seq && shuffleArray(seq), 'response-scramble')
+  }
+
+})
 
 
 </script>
