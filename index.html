@@ -285,23 +285,13 @@ function run(type){
 
 
 /* ===============================
-   RESPONSE GENERATOR (ISOLATED)
+   RESPONSE GENERATOR (ISOLATED, FIXED)
    =============================== */
 
-/*
-  👉 CHANGE THIS to match your existing output element
-  Examples:
-    '#output'
-    '#sequence'
-    '.generated-string'
-*/
-const SOURCE_SEQUENCE_SELECTOR = '#seq'  // <-- EDIT IF NEEDED
-
 function getSourceSequence() {
-  const el = document.querySelector(SOURCE_SEQUENCE_SELECTOR)
-  if (!el) return []
-  // extracts digits 1–4 only, ignores symbols/whitespace
-  return el.textContent.match(/[1-4]/g) || []
+  // Reads numbers directly from existing output
+  const nodes = document.querySelectorAll('#output .number')
+  return Array.from(nodes).map(n => n.textContent.trim())
 }
 
 function renderResponse(seq) {
@@ -322,7 +312,7 @@ function shuffleArray(arr) {
 
 document.getElementById('resp-copy').onclick = () => {
   const seq = getSourceSequence()
-  renderResponse([...seq])
+  renderResponse(seq)
 }
 
 document.getElementById('resp-reverse').onclick = () => {
@@ -334,6 +324,7 @@ document.getElementById('resp-scramble').onclick = () => {
   const seq = getSourceSequence()
   renderResponse(shuffleArray(seq))
 }
+
 
 </script>
 
