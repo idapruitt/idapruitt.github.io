@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #7d3cab;
+      background: #3c71ab;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -130,6 +130,10 @@
       while (i + count < len && chars[i + count] === chars[i]) count++;
       if (count >= 2) pairCount += Math.floor(count / 2);
       if (count >= 3) tripleCount += Math.floor(count / 3);
+
+      // Add in a generic "inarow" perception for sequences of length 4+ up to the count
+      for (let n = 4; n <= count; n++) tags.push(n + 'inarow');
+
       i += count;
     }
     if (pairCount > 0) tags.push(pairCount + 'pair');
