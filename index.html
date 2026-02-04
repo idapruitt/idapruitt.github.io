@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #91ab3c;
+      background: #ab3c7e;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -92,21 +92,20 @@
   }
 
   function genAlternating(len) {
-  // alternating must be even and at least length 4
-  if (len % 2 !== 0) len -= 1;
-  if (len < 4) len = 4;
+    // must be even to avoid symmetry
+    if (len % 2 !== 0) len -= 1;
+    if (len < 2) len = 2;
 
-  const a = choice(SYMBOLS);
-  let b;
-  do { b = choice(SYMBOLS); } while (b === a);
+    const a = choice(SYMBOLS);
+    let b;
+    do { b = choice(SYMBOLS); } while (b === a);
 
-  let out = '';
-  for (let i = 0; i < len; i++) {
-    out += (i % 2 === 0 ? a : b);
+    let out = '';
+    for (let i = 0; i < len; i++) {
+      out += (i % 2 === 0 ? a : b);
+    }
+    return out;
   }
-  return out;
-}
-
 
   function genSymmetric(len) {
     const half = Math.ceil(len / 2);
@@ -117,21 +116,18 @@
   }
 
   function genRepeating(len) {
-  // motif length 3 or 4, minimum two repeats
-  const motifLen = Math.random() < 0.5 ? 3 : 4;
-  const minLen = motifLen * 2;
+    // motif length 3 or 4 only
+    const motifLen = Math.random() < 0.5 ? 3 : 4;
+    len = Math.floor(len / motifLen) * motifLen;
+    if (len < motifLen) len = motifLen;
 
-  if (len < minLen) len = minLen;
-  len = Math.floor(len / motifLen) * motifLen;
+    let motif = '';
+    for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
 
-  let motif = '';
-  for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
-
-  let out = '';
-  while (out.length < len) out += motif;
-  return out;
-}
-
+    let out = '';
+    while (out.length < len) out += motif;
+    return out;
+  }
 
   function genDominant(len) {
     const dom = choice(SYMBOLS);
@@ -153,38 +149,56 @@
      ========================= */
 
   function classify(seq) {
-  const chars = seq.split('');
-  const len = chars.length;
+    const chars = seq.split('');
+    const len = chars.length;
+    const tags = [];
 
-  const counts = {};
-  for (const c of chars) counts[c] = (counts[c] || 0) + 1;
+    // count symbols
+    const counts = {};
+    for (const c of chars) counts[c] = (counts[c] || 0) + 1;
+    const uniqueCount = Object.keys(counts).length;
+    const maxCount = Math.max(...Object.values(counts));
 
-  const maxCount = Math.max(...Object.values(counts));
-  if (maxCount / len >= 0.6) return 'dominant';
-
-  if (Object.keys(counts).length === 1) return 'uniform';
-
-  const reversed = chars.slice().reverse().join('');
-  if (seq === reversed) return 'symmetric';
-
-  let alternating = true;
-  for (let i = 2; i < len; i++) {
-    if (chars[i] !== chars[i - 2]) {
-      alternating = false;
-      break;
+    // uniform
+    if (uniqueCount === 1) {
+      tags.push('uniform');
+      tags.push('dominant'); // uniform is always dominant
+    } else {
+      // dominant (>=60%, min length 4)
+      if (len >= 4 && maxCount / len >= 0.6) {
+        tags.push('dominant');
+      }
     }
+
+    // symmetric
+    const reversed = chars.slice().reverse().join('');
+    if (seq === reversed) tags.push('symmetric');
+
+    // alternating (even length, >=4)
+    let alternating = true;
+    for (let i = 2; i < len; i++) {
+      if (chars[i] !== chars[i - 2]) {
+        alternating = false;
+        break;
+      }
+    }
+    if (alternating && len % 2 === 0 && len >= 4) {
+      tags.push('alternating');
+    }
+
+    // repeating motif (3 or 4)
+    for (let size of [3, 4]) {
+      if (len % size !== 0) continue;
+      const motif = chars.slice(0, size).join('');
+      if (motif.repeat(len / size) === seq) {
+        tags.push('repeating');
+        break;
+      }
+    }
+
+    if (tags.length === 0) tags.push('chaotic');
+    return tags;
   }
-  if (alternating && len % 2 === 0 && len >= 4) return 'alternating';
-
-  for (let size of [3, 4]) {
-    if (len % size !== 0) continue;
-    const motif = chars.slice(0, size).join('');
-    if (motif.repeat(len / size) === seq) return 'repeating';
-  }
-
-  return 'chaotic';
-}
-
 
   /* =========================
      DISPATCH
@@ -206,7 +220,7 @@
     const perceived = classify(seq);
 
     document.getElementById('output').textContent = seq.split('').join(' ');
-    document.getElementById('meta').textContent = `intent: ${type} | perceived: ${perceived}`;
+    document.getElementById('meta').textContent = `intent: ${type} | perceived: ${perceived.join(', ')}`;
   }
 </script>
 </body>
