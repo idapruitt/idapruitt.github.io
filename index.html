@@ -1,162 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Pattern Generator</title>
-<style>
-  body {
-    font-family: monospace;
-    background: #347331;
-    color: #eaeaf0;
-    padding: 20px;
-  }
-
-  button {
-    margin: 4px;
-    padding: 6px 10px;
-    cursor: pointer;
-  }
-
-  .output {
-    margin-top: 20px;
-    font-size: 20px;
-  }
-
-  .label {
-    margin-top: 6px;
-    opacity: 0.7;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Pattern Generator Playground</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #5a3173;
+      color: #e6e6eb;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    p {
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    button {
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #1f1f2e;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button:hover {
+      background: #2c2c44;
+    }
+    .output {
+      font-size: 2rem;
+      letter-spacing: 0.4rem;
+      padding: 24px;
+      background: #14141d;
+      border-radius: 16px;
+      min-height: 72px;
+    }
+    .meta {
+      margin-top: 8px;
+      opacity: 0.6;
+      font-size: 0.9rem;
+    }
+  </style>
 </head>
 <body>
+  <h1>Pattern Generator Playground</h1>
+  <p>Generators express intent. Classifier expresses perception. Symbols are 1–4, length 2–10.</p>
 
-<h2>Pattern Types</h2>
+  <div class="controls">
+    <button onclick="run('uniform')">Uniform</button>
+    <button onclick="run('alternating')">Alternating</button>
+    <button onclick="run('symmetric')">Symmetric</button>
+    <button onclick="run('repeating')">Repeating Motif</button>
+    <button onclick="run('dominant')">Dominant Symbol</button>
+    <button onclick="run('chaotic')">Chaotic</button>
+  </div>
 
-<button onclick="run('uniform')">uniform</button>
-<button onclick="run('symmetric')">symmetric</button>
-<button onclick="run('alternating')">alternating</button>
-<button onclick="run('repeating')">repeating</button>
-<button onclick="run('chaotic')">chaotic</button>
-
-<div class="output" id="output"></div>
-<div class="label" id="label"></div>
+  <div class="output" id="output"></div>
+  <div class="meta" id="meta"></div>
 
 <script>
-const SYMBOLS = ['1','2','3','4','5'];
+  /* =========================
+     SHARED UTILITIES
+     ========================= */
 
-function randSymbol() {
-  return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-}
+  const SYMBOLS = ['1','2','3','4'];
 
-function randInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-/* =========================
-   GENERATORS (NO CONSTRAINTS)
-   ========================= */
-
-function genUniform(len) {
-  const s = randSymbol();
-  return s.repeat(len);
-}
-
-function genSymmetric(len) {
-  const half = Math.ceil(len / 2);
-  let left = '';
-  for (let i = 0; i < half; i++) left += randSymbol();
-  const right = left.slice(0, len / 2).split('').reverse().join('');
-  return left + right;
-}
-
-function genAlternating(len) {
-  let a = randSymbol();
-  let b = randSymbol();
-  let out = '';
-  for (let i = 0; i < len; i++) {
-    out += (i % 2 === 0 ? a : b);
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
-  return out;
-}
 
-function genRepeating(len) {
-  const motifLen = randInt(2, 3);
-  let motif = '';
-  for (let i = 0; i < motifLen; i++) motif += randSymbol();
-  let out = '';
-  while (out.length < len) out += motif;
-  return out.slice(0, len);
-}
+  function choice(arr) {
+    return arr[randInt(0, arr.length - 1)];
+  }
 
-function genChaotic(len) {
-  let out = '';
-  for (let i = 0; i < len; i++) out += randSymbol();
-  return out;
-}
+  /* =========================
+     GENERATORS (STRUCTURAL)
+     ========================= */
 
-/* =========================
-   CLASSIFIER (FAST, O(n))
-   ========================= */
+  function genUniform(len) {
+    const s = choice(SYMBOLS);
+    return s.repeat(len);
+  }
 
-function classify(seq) {
-  const chars = seq.split('');
-  const unique = new Set(chars);
+  function genAlternating(len) {
+    // must be even to avoid symmetry
+    if (len % 2 !== 0) len -= 1;
+    if (len < 2) len = 2;
 
-  if (unique.size === 1) return 'uniform';
+    const a = choice(SYMBOLS);
+    let b;
+    do { b = choice(SYMBOLS); } while (b === a);
 
-  const reversed = chars.slice().reverse().join('');
-  if (seq === reversed) return 'symmetric';
-
-  let alternating = true;
-  for (let i = 2; i < chars.length; i++) {
-    if (chars[i] !== chars[i - 2]) {
-      alternating = false;
-      break;
+    let out = '';
+    for (let i = 0; i < len; i++) {
+      out += (i % 2 === 0 ? a : b);
     }
+    return out;
   }
-  if (alternating) return 'alternating';
 
-  for (let size = 2; size <= Math.floor(chars.length / 2); size++) {
-    const motif = chars.slice(0, size).join('');
-    if (motif.repeat(Math.ceil(chars.length / size)).startsWith(seq)) {
-      return 'repeating';
+  function genSymmetric(len) {
+    const half = Math.ceil(len / 2);
+    let left = '';
+    for (let i = 0; i < half; i++) left += choice(SYMBOLS);
+    const right = left.slice(0, len / 2).split('').reverse().join('');
+    return left + right;
+  }
+
+  function genRepeating(len) {
+    // motif length 3 or 4 only
+    const motifLen = Math.random() < 0.5 ? 3 : 4;
+    len = Math.floor(len / motifLen) * motifLen;
+    if (len < motifLen) len = motifLen;
+
+    let motif = '';
+    for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
+
+    let out = '';
+    while (out.length < len) out += motif;
+    return out;
+  }
+
+  function genDominant(len) {
+    const dom = choice(SYMBOLS);
+    let out = '';
+    for (let i = 0; i < len; i++) {
+      out += (Math.random() < 0.65 ? dom : choice(SYMBOLS.filter(s => s !== dom)));
     }
+    return out;
   }
 
-  return 'chaotic';
-}
-
-/* =========================
-   DISPATCH
-   ========================= */
-
-function generate(type, len) {
-  switch (type) {
-    case 'uniform': return genUniform(len);
-    case 'symmetric': return genSymmetric(len);
-    case 'alternating': return genAlternating(len);
-    case 'repeating': return genRepeating(len);
-    case 'chaotic': return genChaotic(len);
-  }
-}
-
-function run(type) {
-  const len = randInt(5, 8);
-
-  let seq = generate(type, len);
-  let result = classify(seq);
-
-  // one bounded retry if it collapses
-  if (result === 'uniform' && type !== 'uniform') {
-    seq = generate(type, len);
-    result = classify(seq);
+  function genChaotic(len) {
+    let out = '';
+    for (let i = 0; i < len; i++) out += choice(SYMBOLS);
+    return out;
   }
 
-  document.getElementById('output').textContent = seq;
-  document.getElementById('label').textContent =
-    `generated as: ${type} | perceived as: ${result}`;
-}
+  /* =========================
+     CLASSIFIER (PERCEPTUAL)
+     ========================= */
+
+  function classify(seq) {
+    const chars = seq.split('');
+    const unique = new Set(chars);
+
+    if (unique.size === 1) return 'uniform';
+
+    const reversed = chars.slice().reverse().join('');
+    if (seq === reversed) return 'symmetric';
+
+    let alternating = true;
+    for (let i = 2; i < chars.length; i++) {
+      if (chars[i] !== chars[i - 2]) {
+        alternating = false;
+        break;
+      }
+    }
+    if (alternating && chars.length % 2 === 0) return 'alternating';
+
+    for (let size of [3, 4]) {
+      if (chars.length % size !== 0) continue;
+      const motif = chars.slice(0, size).join('');
+      if (motif.repeat(chars.length / size) === seq) return 'repeating';
+    }
+
+    return 'chaotic';
+  }
+
+  /* =========================
+     DISPATCH
+     ========================= */
+
+  function run(type) {
+    let len = randInt(2, 10);
+    let seq;
+
+    switch (type) {
+      case 'uniform': seq = genUniform(len); break;
+      case 'alternating': seq = genAlternating(len); break;
+      case 'symmetric': seq = genSymmetric(len); break;
+      case 'repeating': seq = genRepeating(len); break;
+      case 'dominant': seq = genDominant(len); break;
+      case 'chaotic': seq = genChaotic(len); break;
+    }
+
+    const perceived = classify(seq);
+
+    document.getElementById('output').textContent = seq.split('').join(' ');
+    document.getElementById('meta').textContent = `intent: ${type} | perceived: ${perceived}`;
+  }
 </script>
-
 </body>
 </html>
