@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #5a3173;
+      background: #91ab3c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -92,20 +92,21 @@
   }
 
   function genAlternating(len) {
-    // must be even to avoid symmetry
-    if (len % 2 !== 0) len -= 1;
-    if (len < 2) len = 2;
+  // alternating must be even and at least length 4
+  if (len % 2 !== 0) len -= 1;
+  if (len < 4) len = 4;
 
-    const a = choice(SYMBOLS);
-    let b;
-    do { b = choice(SYMBOLS); } while (b === a);
+  const a = choice(SYMBOLS);
+  let b;
+  do { b = choice(SYMBOLS); } while (b === a);
 
-    let out = '';
-    for (let i = 0; i < len; i++) {
-      out += (i % 2 === 0 ? a : b);
-    }
-    return out;
+  let out = '';
+  for (let i = 0; i < len; i++) {
+    out += (i % 2 === 0 ? a : b);
   }
+  return out;
+}
+
 
   function genSymmetric(len) {
     const half = Math.ceil(len / 2);
@@ -116,18 +117,21 @@
   }
 
   function genRepeating(len) {
-    // motif length 3 or 4 only
-    const motifLen = Math.random() < 0.5 ? 3 : 4;
-    len = Math.floor(len / motifLen) * motifLen;
-    if (len < motifLen) len = motifLen;
+  // motif length 3 or 4, minimum two repeats
+  const motifLen = Math.random() < 0.5 ? 3 : 4;
+  const minLen = motifLen * 2;
 
-    let motif = '';
-    for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
+  if (len < minLen) len = minLen;
+  len = Math.floor(len / motifLen) * motifLen;
 
-    let out = '';
-    while (out.length < len) out += motif;
-    return out;
-  }
+  let motif = '';
+  for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
+
+  let out = '';
+  while (out.length < len) out += motif;
+  return out;
+}
+
 
   function genDominant(len) {
     const dom = choice(SYMBOLS);
@@ -149,31 +153,38 @@
      ========================= */
 
   function classify(seq) {
-    const chars = seq.split('');
-    const unique = new Set(chars);
+  const chars = seq.split('');
+  const len = chars.length;
 
-    if (unique.size === 1) return 'uniform';
+  const counts = {};
+  for (const c of chars) counts[c] = (counts[c] || 0) + 1;
 
-    const reversed = chars.slice().reverse().join('');
-    if (seq === reversed) return 'symmetric';
+  const maxCount = Math.max(...Object.values(counts));
+  if (maxCount / len >= 0.6) return 'dominant';
 
-    let alternating = true;
-    for (let i = 2; i < chars.length; i++) {
-      if (chars[i] !== chars[i - 2]) {
-        alternating = false;
-        break;
-      }
+  if (Object.keys(counts).length === 1) return 'uniform';
+
+  const reversed = chars.slice().reverse().join('');
+  if (seq === reversed) return 'symmetric';
+
+  let alternating = true;
+  for (let i = 2; i < len; i++) {
+    if (chars[i] !== chars[i - 2]) {
+      alternating = false;
+      break;
     }
-    if (alternating && chars.length % 2 === 0) return 'alternating';
-
-    for (let size of [3, 4]) {
-      if (chars.length % size !== 0) continue;
-      const motif = chars.slice(0, size).join('');
-      if (motif.repeat(chars.length / size) === seq) return 'repeating';
-    }
-
-    return 'chaotic';
   }
+  if (alternating && len % 2 === 0 && len >= 4) return 'alternating';
+
+  for (let size of [3, 4]) {
+    if (len % size !== 0) continue;
+    const motif = chars.slice(0, size).join('');
+    if (motif.repeat(len / size) === seq) return 'repeating';
+  }
+
+  return 'chaotic';
+}
+
 
   /* =========================
      DISPATCH
