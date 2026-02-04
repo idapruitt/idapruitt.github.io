@@ -285,11 +285,11 @@ function run(type){
 
 
 /* ===============================
-   RESPONSE GENERATOR (ISOLATED)
+   RESPONSE GENERATOR (FULL)
    =============================== */
-
 window.addEventListener('DOMContentLoaded', () => {
 
+  // local symbol mapping for rendering
   const RESPONSE_SYMBOLS = [
     { char: '♥', class: 'heart', name: 'heart' },
     { char: '★', class: 'star', name: 'star' },
@@ -297,6 +297,27 @@ window.addEventListener('DOMContentLoaded', () => {
     { char: '✖', class: 'xmark', name: 'x' }
   ]
 
+  // ---------- utilities ----------
+  function readCurrentSequence() {
+    const nodes = document.querySelectorAll('#output .number')
+    if (!nodes.length) return null
+    return Array.from(nodes).map(n => Number(n.textContent) - 1)
+  }
+
+  function shuffle(arr) {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+
+  function choice(arr) {
+    return arr[Math.floor(Math.random() * arr.length)]
+  }
+
+  // ---------- render ----------
   function renderSymbols(seq) {
     return seq.map(c => {
       const s = RESPONSE_SYMBOLS[c]
@@ -309,92 +330,59 @@ window.addEventListener('DOMContentLoaded', () => {
     }).join('')
   }
 
-  function readCurrentSequence() {
-    const nums = document.querySelectorAll('#output .number')
-    if (!nums.length) return null
-    return Array.from(nums).map(n => Number(n.textContent) - 1)
-  }
-
-  function shuffle(arr) {
-    const a = [...arr]
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[a[i], a[j]] = [a[j], a[i]]
-    }
-    return a
-  }
-
   function outputResponse(seq, intent) {
-    if (!seq) return
-
-    const result = classify(seq)
-
-    document.getElementById('response-output').innerHTML =
-      renderSymbols(seq)
-
+    if (!seq || !seq.length) return
+    const result = classify(seq) // global classifier
+    document.getElementById('response-output').innerHTML = renderSymbols(seq)
     document.getElementById('response-meta').textContent =
       `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
   }
 
-  document.getElementById('resp-copy').onclick = () => {
-    const seq = readCurrentSequence()
-    outputResponse(seq, 'response-copy')
+  // ---------- response types ----------
+  function symbolSwap(seq) {
+    const unique = [...new Set(seq)]
+    if (unique.length < 2) return seq.slice()
+    const available = shuffle([0,1,2,3])
+    const map = {}
+    unique.forEach((s, i) => map[s] = available[i])
+    return seq.map(s => map[s])
   }
 
-  document.getElementById('resp-reverse').onclick = () => {
-    const seq = readCurrentSequence()
-    outputResponse(seq && [...seq].reverse(), 'response-reverse')
+  function randomResponse() {
+    const len = Math.floor(Math.random() * 9) + 2 // 2–10
+    const out = []
+    for (let i = 0; i < len; i++) {
+      out.push(Math.floor(Math.random() * 4))
+    }
+    return out
   }
 
-  document.getElementById('resp-scramble').onclick = () => {
-    const seq = readCurrentSequence()
-    outputResponse(seq && shuffle(seq), 'response-scramble')
+  function takeover(seq) {
+    if (!seq || !seq.length) return seq
+    const chosen = choice(seq)
+    return Array(seq.length).fill(chosen)
   }
+
+  // ---------- button bindings ----------
+  const buttonMap = {
+    'resp-copy': seq => seq,
+    'resp-reverse': seq => [...seq].reverse(),
+    'resp-scramble': seq => shuffle(seq),
+    'resp-swap': seq => symbolSwap(seq),
+    'resp-random': () => randomResponse(),
+    'resp-takeover': seq => takeover(seq)
+  }
+
+  Object.entries(buttonMap).forEach(([id, func]) => {
+    const btn = document.getElementById(id)
+    if (!btn) return
+    btn.onclick = () => {
+      const seq = ['resp-random'].includes(id) ? null : readCurrentSequence()
+      outputResponse(func(seq), `response-${id.replace('resp-','')}`)
+    }
+  })
 
 })
-
-/* ===== Additional Response Types ===== */
-
-function symbolSwap(seq) {
-  const unique = [...new Set(seq)]
-  if (unique.length < 2) return seq.slice()
-
-  // build a random remap for symbols used
-  const available = shuffle([0,1,2,3])
-  const map = {}
-  unique.forEach((s, i) => map[s] = available[i])
-
-  return seq.map(s => map[s])
-}
-
-function randomResponse() {
-  const len = Math.floor(Math.random() * 9) + 2 // 2–10
-  const out = []
-  for (let i = 0; i < len; i++) {
-    out.push(Math.floor(Math.random() * 4))
-  }
-  return out
-}
-
-function takeover(seq) {
-  if (!seq || !seq.length) return seq
-  const chosen = choice(seq)
-  return Array(seq.length).fill(chosen)
-}
-
-document.getElementById('resp-swap').onclick = () => {
-  const seq = readCurrentSequence()
-  outputResponse(seq && symbolSwap(seq), 'response-symbol-swap')
-}
-
-document.getElementById('resp-random').onclick = () => {
-  outputResponse(randomResponse(), 'response-random')
-}
-
-document.getElementById('resp-takeover').onclick = () => {
-  const seq = readCurrentSequence()
-  outputResponse(seq && takeover(seq), 'response-takeover')
-}
 
 
 
@@ -408,9 +396,9 @@ document.getElementById('resp-takeover').onclick = () => {
   <button id="resp-copy">Full Copy</button>
   <button id="resp-reverse">Reverse</button>
   <button id="resp-scramble">Scramble</button>
-  <button id="resp-swap">Respond: Symbol Swap</button>
-  <button id="resp-random">Respond: Random</button>
-  <button id="resp-takeover">Respond: Takeover</button>
+  <button id="resp-swap">Symbol Swap</button>
+  <button id="resp-random">Random</button>
+  <button id="resp-takeover">Takeover</button>
 </div>
 
 <div class="output" id="response-output"></div>
