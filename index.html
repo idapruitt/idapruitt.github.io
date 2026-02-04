@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #9cab3c;
+      background: #7d3cab;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -87,7 +87,7 @@
   function genChaotic(len) { let out = ''; for (let i = 0; i < len; i++) out += choice(SYMBOLS); return out; }
   function genEqual(n) { let chars = shuffle(SYMBOLS.slice()).slice(0, n); const repeatCount = randInt(2, 3); let arr = []; for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars); return shuffle(arr).join(''); }
   function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s; } return out.slice(0, len); }
-  function genTriples(len) { len = Math.floor(len / 3) * 3; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s + s; } return out.slice(0, len); }
+  function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = ''; for (let i = 0; i < tripleCount; i++) out += choice(SYMBOLS).repeat(3); return out; }
 
   // ================= Classifier =================
   function classify(seq) {
