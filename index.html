@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #3b6e6d;
+  background: #6e3b54;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -289,7 +289,7 @@ function run(type){
    =============================== */
 window.addEventListener('DOMContentLoaded', () => {
 
-  // local symbol mapping for rendering
+  // -------- Symbols for rendering --------
   const RESPONSE_SYMBOLS = [
     { char: '♥', class: 'heart', name: 'heart' },
     { char: '★', class: 'star', name: 'star' },
@@ -297,7 +297,7 @@ window.addEventListener('DOMContentLoaded', () => {
     { char: '✖', class: 'xmark', name: 'x' }
   ]
 
-  // ---------- utilities ----------
+  // -------- Utilities --------
   function readCurrentSequence() {
     const nodes = document.querySelectorAll('#output .number')
     if (!nodes.length) return null
@@ -317,7 +317,7 @@ window.addEventListener('DOMContentLoaded', () => {
     return arr[Math.floor(Math.random() * arr.length)]
   }
 
-  // ---------- render ----------
+  // -------- Renderer --------
   function renderSymbols(seq) {
     return seq.map(c => {
       const s = RESPONSE_SYMBOLS[c]
@@ -330,35 +330,34 @@ window.addEventListener('DOMContentLoaded', () => {
     }).join('')
   }
 
-  function outputResponse(seq, intent) {
+  function outputResponse(seq, intent, outputId='response-output', metaId='response-meta') {
     if (!seq || !seq.length) return
-    const result = classify(seq) // global classifier
-    document.getElementById('response-output').innerHTML = renderSymbols(seq)
-    document.getElementById('response-meta').textContent =
-      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
+    const result = classify(seq) // uses your global classifier
+    document.getElementById(outputId).innerHTML = renderSymbols(seq)
+    document.getElementById(metaId).textContent =
+      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${[...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))].join(', ')} | length: ${seq.length}`
   }
 
-  // ---------- response types ----------
+  // -------- Response types --------
   function symbolSwap(seq) {
-  if (!seq || !seq.length) return seq
+    if (!seq || !seq.length) return seq
+    const unique = [...new Set(seq)]
+    const available = [0,1,2,3]
 
-  const unique = [...new Set(seq)]
-  const available = [0,1,2,3]
+    // If uniform, pick a different symbol
+    if (unique.length === 1) {
+      const current = unique[0]
+      let newSymbol
+      do { newSymbol = choice(available) } while (newSymbol === current)
+      return Array(seq.length).fill(newSymbol)
+    }
 
-  // if uniform, replace symbol with a different random symbol
-  if (unique.length === 1) {
-    const current = unique[0]
-    let newSymbol
-    do { newSymbol = choice(available) } while (newSymbol === current)
-    return Array(seq.length).fill(newSymbol)
+    // Otherwise remap symbols randomly
+    const map = {}
+    const shuffled = shuffle(available)
+    unique.forEach((s,i) => map[s] = shuffled[i])
+    return seq.map(s => map[s])
   }
-
-  // otherwise, do standard symbol remap
-  const map = {}
-  const shuffled = shuffle(available)
-  unique.forEach((s,i) => map[s] = shuffled[i])
-  return seq.map(s => map[s])
-}
 
   function randomResponse() {
     const len = Math.floor(Math.random() * 9) + 2 // 2–10
@@ -375,14 +374,14 @@ window.addEventListener('DOMContentLoaded', () => {
     return Array(seq.length).fill(chosen)
   }
 
-  // ---------- button bindings ----------
+  // -------- Button bindings --------
   const buttonMap = {
     'resp-copy': seq => seq,
-    'resp-reverse': seq => [...seq].reverse(),
-    'resp-scramble': seq => shuffle(seq),
-    'resp-swap': seq => symbolSwap(seq),
+    'resp-reverse': seq => seq && [...seq].reverse(),
+    'resp-scramble': seq => seq && shuffle(seq),
+    'resp-swap': seq => seq && symbolSwap(seq),
     'resp-random': () => randomResponse(),
-    'resp-takeover': seq => takeover(seq)
+    'resp-takeover': seq => seq && takeover(seq)
   }
 
   Object.entries(buttonMap).forEach(([id, func]) => {
@@ -394,37 +393,26 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   })
 
-})
+  // -------- Manual input handler --------
+  const manualSubmit = document.getElementById('manual-submit')
+  if (manualSubmit) {
+    manualSubmit.onclick = () => {
+      const input = document.getElementById('manual-input').value.trim()
+      if (!input) return
 
-// ---------- Manual input handler ----------
-document.getElementById('manual-submit').onclick = () => {
-  const input = document.getElementById('manual-input').value.trim()
-  if (!input) return
+      const seq = []
+      for (let ch of input) {
+        const n = Number(ch)
+        if (n >= 1 && n <= 4) seq.push(n - 1)
+      }
 
-  // parse string to numeric sequence (0-3)
-  const seq = []
-  for (let ch of input) {
-    const n = Number(ch)
-    if (n >= 1 && n <= 4) seq.push(n - 1)
+      if (!seq.length) return alert('Invalid input: use digits 1-4 only')
+
+      outputResponse(seq, 'manual-input', 'manual-output', 'manual-meta')
+    }
   }
 
-  if (!seq.length) return alert('Invalid input: use digits 1-4 only')
-
-  // render same as generator/responses
-  const renderSymbols = seq => seq.map(c => {
-    const s = RESPONSE_SYMBOLS[c]
-    return `<div class="symbol-container">
-              <span class="symbol ${s.class}">${s.char}</span>
-              <span class="number">${c+1}</span>
-            </div>`
-  }).join('')
-
-  const result = classify(seq)
-
-  document.getElementById('manual-output').innerHTML = renderSymbols(seq)
-  document.getElementById('manual-meta').textContent =
-    `manual input | perceived: ${result.tags.join(', ')} | symbols: ${[...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))].join(', ')} | length: ${seq.length}`
-}
+})
 
 
 </script>
