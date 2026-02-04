@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #5b3b6e;
+  background: #3b4f6e;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -458,22 +458,37 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function outputResponse(seq, intent, outputId='response-output', metaId='response-meta') {
-    if (!seq || !seq.length) return
-    const result = classify(seq) // uses your global classifier
-    document.getElementById(outputId).innerHTML = renderSymbols(seq)
+  if (!seq || !seq.length) return
+  const result = classify(seq) // your existing classifier
+  document.getElementById(outputId).innerHTML = renderSymbols(seq)
 
-    // evaluation
-    const original = readCurrentSequence()
-    const evalResult = evaluateSequence(original, seq)
+  const original = readCurrentSequence()
+  const evalResult = evaluateSequence(original, seq)
 
-    const symbolsUsed = [...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))]
-    document.getElementById(metaId).textContent =
-      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${symbolsUsed.join(', ')} | length: ${seq.length}` +
-      (evalResult ? 
-        ` | exact ${evalResult.exactMatchPct}% | symbols ${evalResult.symbolMatchPct}% | changes ${evalResult.changes}` +
-        ` | tags match: ${evalResult.matchingTags.join(', ')} | missing: ${evalResult.missingTags.join(', ')} | extra: ${evalResult.extraTags.join(', ')}`
-        : '')
+  const symbolsUsed = [...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))]
+
+  // Basic info
+  let tableHTML = `<table style="border-collapse: collapse; width: 100%; margin-top: 6px;">
+    <tr><th style="border: 1px solid #555; padding: 4px;">Intent</th><td style="border: 1px solid #555; padding: 4px;">${intent}</td></tr>
+    <tr><th style="border: 1px solid #555; padding: 4px;">Perceived</th><td style="border: 1px solid #555; padding: 4px;">${result.tags.join(', ')}</td></tr>
+    <tr><th style="border: 1px solid #555; padding: 4px;">Symbols</th><td style="border: 1px solid #555; padding: 4px;">${symbolsUsed.join(', ')}</td></tr>
+    <tr><th style="border: 1px solid #555; padding: 4px;">Length</th><td style="border: 1px solid #555; padding: 4px;">${seq.length}</td></tr>`
+
+  if(evalResult){
+    tableHTML += `
+      <tr><th style="border: 1px solid #555; padding: 4px;">Exact Match %</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.exactMatchPct}%</td></tr>
+      <tr><th style="border: 1px solid #555; padding: 4px;">Symbol Match %</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.symbolMatchPct}%</td></tr>
+      <tr><th style="border: 1px solid #555; padding: 4px;">Changes</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.changes}</td></tr>
+      <tr><th style="border: 1px solid #555; padding: 4px;">Tags Match</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.matchingTags.join(', ')}</td></tr>
+      <tr><th style="border: 1px solid #555; padding: 4px;">Missing Tags</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.missingTags.join(', ')}</td></tr>
+      <tr><th style="border: 1px solid #555; padding: 4px;">Extra Tags</th><td style="border: 1px solid #555; padding: 4px;">${evalResult.extraTags.join(', ')}</td></tr>
+    `
   }
+
+  tableHTML += '</table>'
+  document.getElementById(metaId).innerHTML = tableHTML
+}
+
 
   // -------- Response types --------
   function symbolSwap(seq) {
