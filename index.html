@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #918313;
+  background: #6e483b;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -285,34 +285,37 @@ function run(type){
 
 
 /* ===============================
-   RESPONSE GENERATOR — HARD SAFE
+   RESPONSE GENERATOR (ISOLATED)
    =============================== */
 
 window.addEventListener('DOMContentLoaded', () => {
 
+  const RESPONSE_SYMBOLS = [
+    { char: '♥', class: 'heart', name: 'heart' },
+    { char: '★', class: 'star', name: 'star' },
+    { char: '▲', class: 'triangle', name: 'tri' },
+    { char: '✖', class: 'xmark', name: 'x' }
+  ]
+
+  function renderSymbols(seq) {
+    return seq.map(c => {
+      const s = RESPONSE_SYMBOLS[c]
+      return `
+        <div class="symbol-container">
+          <span class="symbol ${s.class}">${s.char}</span>
+          <span class="number">${c + 1}</span>
+        </div>
+      `
+    }).join('')
+  }
+
   function readCurrentSequence() {
-    const nodes = document.querySelectorAll('#output .number')
-    if (!nodes.length) {
-      console.warn('No source pattern found')
-      return null
-    }
-    return Array.from(nodes).map(n => Number(n.textContent) - 1)
+    const nums = document.querySelectorAll('#output .number')
+    if (!nums.length) return null
+    return Array.from(nums).map(n => Number(n.textContent) - 1)
   }
 
-  function renderResponse(seq, intent) {
-    if (!seq || !seq.length) return
-
-    const result = classify(seq)
-
-    const out = document.getElementById('response-output')
-    const meta = document.getElementById('response-meta')
-
-    out.innerHTML = mapSymbols(seq)
-    meta.textContent =
-      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
-  }
-
-  function shuffleArray(arr) {
+  function shuffle(arr) {
     const a = [...arr]
     for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -321,31 +324,35 @@ window.addEventListener('DOMContentLoaded', () => {
     return a
   }
 
-  const copyBtn = document.getElementById('resp-copy')
-  const revBtn  = document.getElementById('resp-reverse')
-  const scrBtn  = document.getElementById('resp-scramble')
+  function outputResponse(seq, intent) {
+    if (!seq) return
 
-  if (!copyBtn || !revBtn || !scrBtn) {
-    console.error('Response buttons not found in DOM')
-    return
+    const result = classify(seq)
+
+    document.getElementById('response-output').innerHTML =
+      renderSymbols(seq)
+
+    document.getElementById('response-meta').textContent =
+      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
   }
 
-  copyBtn.onclick = () => {
+  document.getElementById('resp-copy').onclick = () => {
     const seq = readCurrentSequence()
-    renderResponse(seq, 'response-copy')
+    outputResponse(seq, 'response-copy')
   }
 
-  revBtn.onclick = () => {
+  document.getElementById('resp-reverse').onclick = () => {
     const seq = readCurrentSequence()
-    renderResponse(seq && [...seq].reverse(), 'response-reverse')
+    outputResponse(seq && [...seq].reverse(), 'response-reverse')
   }
 
-  scrBtn.onclick = () => {
+  document.getElementById('resp-scramble').onclick = () => {
     const seq = readCurrentSequence()
-    renderResponse(seq && shuffleArray(seq), 'response-scramble')
+    outputResponse(seq && shuffle(seq), 'response-scramble')
   }
 
 })
+
 
 
 </script>
