@@ -282,6 +282,79 @@ function run(type){
   output.innerHTML=render(seq);
   meta.textContent=`intent: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
 }
+
+
+/* ===============================
+   RESPONSE GENERATOR (ISOLATED)
+   =============================== */
+
+/*
+  👉 CHANGE THIS to match your existing output element
+  Examples:
+    '#output'
+    '#sequence'
+    '.generated-string'
+*/
+const SOURCE_SEQUENCE_SELECTOR = '#seq'  // <-- EDIT IF NEEDED
+
+function getSourceSequence() {
+  const el = document.querySelector(SOURCE_SEQUENCE_SELECTOR)
+  if (!el) return []
+  // extracts digits 1–4 only, ignores symbols/whitespace
+  return el.textContent.match(/[1-4]/g) || []
+}
+
+function renderResponse(seq) {
+  document.getElementById('response-output').textContent =
+    seq.length ? seq.join('') : '(no sequence)'
+}
+
+function shuffleArray(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/* ---------- Button wiring ---------- */
+
+document.getElementById('resp-copy').onclick = () => {
+  const seq = getSourceSequence()
+  renderResponse([...seq])
+}
+
+document.getElementById('resp-reverse').onclick = () => {
+  const seq = getSourceSequence()
+  renderResponse([...seq].reverse())
+}
+
+document.getElementById('resp-scramble').onclick = () => {
+  const seq = getSourceSequence()
+  renderResponse(shuffleArray(seq))
+}
+
 </script>
+
+<hr style="margin:30px 0">
+
+<h2>Response Generator</h2>
+
+<button id="resp-copy">Full copy</button>
+<button id="resp-reverse">Reverse</button>
+<button id="resp-scramble">Scramble</button>
+
+<div id="response-output" style="
+  margin-top:12px;
+  padding:10px;
+  background:#1b1b1b;
+  border:1px solid #333;
+  min-height:32px;
+  font-size:22px;
+"></div>
+
 </body>
+
+
 </html>
