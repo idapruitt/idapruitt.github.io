@@ -87,7 +87,10 @@
           break;
         }
         case 'alternating': {
-          const [a, b] = symbols.sort(() => 0.5 - Math.random()).slice(0, 2);
+          // enforce true alternation (a ≠ b)
+          const shuffled = symbols.slice().sort(() => 0.5 - Math.random());
+          const a = shuffled[0];
+          const b = shuffled.find(s => s !== a);
           seq = Array.from({ length: len }, (_, i) => (i % 2 === 0 ? a : b));
           break;
         }
@@ -100,15 +103,25 @@
           break;
         }
         case 'symmetric': {
+          // enforce non-uniform symmetry
           const half = Math.floor(len / 2);
-          const left = Array.from({ length: half }, () => choice(symbols));
+          let left;
+          do {
+            left = Array.from({ length: half }, () => choice(symbols));
+          } while (new Set(left).size === 1 && len <= 3);
+
           const mid = len % 2 ? [choice(symbols)] : [];
           seq = [...left, ...mid, ...left.slice().reverse()];
           break;
         }
         case 'repeating': {
+          // enforce motif with variation
           const motifLen = randInt(2, Math.min(4, len));
-          const motif = Array.from({ length: motifLen }, () => choice(symbols));
+          let motif;
+          do {
+            motif = Array.from({ length: motifLen }, () => choice(symbols));
+          } while (new Set(motif).size === 1);
+
           while (seq.length < len) seq.push(motif[seq.length % motif.length]);
           break;
         }
