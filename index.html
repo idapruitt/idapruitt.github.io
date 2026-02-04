@@ -43,11 +43,21 @@
       background: #14141d;
       border-radius: 16px;
       min-height: 72px;
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .symbol-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 0.2rem;
     }
     .symbol {
-      font-size: 2rem;
-      display: inline-block;
-      margin: 0 0.1rem;
+      font-size: 1.2rem;
+    }
+    .number {
+      font-size: 1rem;
+      margin-top: 2px;
     }
     .heart { color: #ff4d6d; }
     .star { color: #ffd700; }
@@ -62,11 +72,12 @@
 </head>
 <body>
   <h1>Pattern Generator Playground</h1>
-  <p>Generators express intent. Classifier expresses perception. Symbols are ♥, ★, ▲, ✖, length 2–10.</p>
+  <p>Generators express intent. Classifier expresses perception. Symbols above numbers: ♥1, ★2, ▲3, ✖4, length 2–10.</p>
 
   <div class="controls">
     <button onclick="run('uniform')">Uniform</button>
     <button onclick="run('alternating')">Alternating</button>
+    <button onclick="run('symalt')">Symmetric Alternating</button>
     <button onclick="run('symmetric')">Symmetric</button>
     <button onclick="run('repeating')">Repeating Motif</button>
     <button onclick="run('dominant')">Dominant Symbol</button>
@@ -77,7 +88,6 @@
     <button onclick="run('pairs')">Pairs</button>
     <button onclick="run('triples')">Triples</button>
     <button onclick="run('block')">Block</button>
-    <button onclick="run('symalt')">Symmetric Alternating</button>
   </div>
 
   <div class="output" id="output"></div>
@@ -98,13 +108,14 @@
   function mapSymbols(chars) {
     return chars.map(c => {
       const sym = SYMBOLS[c];
-      return `<span class='symbol ${sym.class}'>${sym.char}</span>`;
+      return `<div class='symbol-container'><span class='symbol ${sym.class}'>${sym.char}</span><span class='number'>${c+1}</span></div>`;
     }).join('');
   }
 
   // ================= Generators =================
   function genUniform(len) { const s = randInt(0,3); return Array(len).fill(s); }
   function genAlternating(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = randInt(0,3); let b; do { b = randInt(0,3); } while (b === a); let out = []; for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b); return out; }
+  function genSymAlt(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = randInt(0,3); let b; do { b = randInt(0,3); } while (b === a); let out = []; for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b); out[len-1] = a; return out; }
   function genSymmetric(len) { const half = Math.ceil(len / 2); let left = []; for (let i = 0; i < half; i++) left.push(randInt(0,3)); const right = left.slice(0, len / 2).reverse(); return left.concat(right); }
   function genRepeating(len) { const motifLen = Math.random() < 0.5 ? 3 : 4; const minLen = motifLen * 2; if (len < minLen) len = minLen; len = Math.floor(len / motifLen) * motifLen; let motif = []; for (let i = 0; i < motifLen; i++) motif.push(randInt(0,3)); let out = []; while (out.length < len) out = out.concat(motif); return out.slice(0,len); }
   function genDominant(len) { const dom = randInt(0,3); let out = []; for (let i = 0; i < len; i++) out.push(Math.random() < 0.65 ? dom : randInt(0,3)); return out; }
@@ -128,15 +139,6 @@
     for (let i = 0; i < blockSizes.length; i++) {
       out = out.concat(Array(blockSizes[i]).fill(usedChars[i % usedChars.length]));
     }
-    return out;
-  }
-  function genSymAlt(len) {
-    if (len % 2 !== 0) len -= 1; if (len < 4) len = 4;
-    const a = randInt(0,3);
-    let b; do { b = randInt(0,3); } while (b === a);
-    let out = [];
-    for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b);
-    out[len-1] = a; // ensure ends on first symbol
     return out;
   }
 
@@ -196,6 +198,7 @@
     switch(type){
       case 'uniform': seq=genUniform(len); break;
       case 'alternating': seq=genAlternating(len); break;
+      case 'symalt': seq=genSymAlt(len); break;
       case 'symmetric': seq=genSymmetric(len); break;
       case 'repeating': seq=genRepeating(len); break;
       case 'dominant': seq=genDominant(len); break;
@@ -206,7 +209,6 @@
       case 'pairs': seq=genPairs(len); break;
       case 'triples': seq=genTriples(len); break;
       case 'block': seq=genBlock(len); break;
-      case 'symalt': seq=genSymAlt(len); break;
     }
     const perceived=classify(seq);
     document.getElementById('output').innerHTML = mapSymbols(seq);
