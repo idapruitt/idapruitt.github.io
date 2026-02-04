@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #3cab80;
+      background: #ab3c5d;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -77,82 +77,18 @@
 
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function choice(arr) { return arr[randInt(0, arr.length - 1)]; }
-
-  function shuffle(arr) {
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = randInt(0, i);
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-    }
-    return arr;
-  }
+  function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = randInt(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 
   // ================= Generators =================
   function genUniform(len) { const s = choice(SYMBOLS); return s.repeat(len); }
-
-  function genAlternating(len) {
-    if (len % 2 !== 0) len -= 1;
-    if (len < 4) len = 4;
-    const a = choice(SYMBOLS);
-    let b; do { b = choice(SYMBOLS); } while (b === a);
-    let out = ''; for (let i = 0; i < len; i++) out += (i % 2 === 0 ? a : b);
-    return out;
-  }
-
-  function genSymmetric(len) {
-    const half = Math.ceil(len / 2);
-    let left = ''; for (let i = 0; i < half; i++) left += choice(SYMBOLS);
-    const right = left.slice(0, len / 2).split('').reverse().join('');
-    return left + right;
-  }
-
-  function genRepeating(len) {
-    const motifLen = Math.random() < 0.5 ? 3 : 4;
-    const minLen = motifLen * 2;
-    if (len < minLen) len = minLen;
-    len = Math.floor(len / motifLen) * motifLen;
-    let motif = ''; for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS);
-    let out = ''; while (out.length < len) out += motif;
-    return out;
-  }
-
-  function genDominant(len) {
-    const dom = choice(SYMBOLS);
-    let out = ''; for (let i = 0; i < len; i++) out += (Math.random() < 0.65 ? dom : choice(SYMBOLS.filter(s => s !== dom)));
-    return out;
-  }
-
-  function genChaotic(len) {
-    let out = ''; for (let i = 0; i < len; i++) out += choice(SYMBOLS);
-    return out;
-  }
-
-  function genEqual(n) {
-    let chars = shuffle(SYMBOLS.slice()).slice(0, n);
-    const repeatCount = randInt(2, 3);
-    let arr = [];
-    for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars);
-    return shuffle(arr).join('');
-  }
-
-  function genPairs(len) {
-    if (len % 2 !== 0) len -= 1;
-    let out = '';
-    while (out.length < len) {
-      const s = choice(SYMBOLS);
-      out += s + s;
-    }
-    return out.slice(0, len);
-  }
-
-  function genTriples(len) {
-    len = Math.floor(len / 3) * 3;
-    let out = '';
-    while (out.length < len) {
-      const s = choice(SYMBOLS);
-      out += s + s + s;
-    }
-    return out.slice(0, len);
-  }
+  function genAlternating(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = choice(SYMBOLS); let b; do { b = choice(SYMBOLS); } while (b === a); let out = ''; for (let i = 0; i < len; i++) out += (i % 2 === 0 ? a : b); return out; }
+  function genSymmetric(len) { const half = Math.ceil(len / 2); let left = ''; for (let i = 0; i < half; i++) left += choice(SYMBOLS); const right = left.slice(0, len / 2).split('').reverse().join(''); return left + right; }
+  function genRepeating(len) { const motifLen = Math.random() < 0.5 ? 3 : 4; const minLen = motifLen * 2; if (len < minLen) len = minLen; len = Math.floor(len / motifLen) * motifLen; let motif = ''; for (let i = 0; i < motifLen; i++) motif += choice(SYMBOLS); let out = ''; while (out.length < len) out += motif; return out; }
+  function genDominant(len) { const dom = choice(SYMBOLS); let out = ''; for (let i = 0; i < len; i++) out += (Math.random() < 0.65 ? dom : choice(SYMBOLS.filter(s => s !== dom))); return out; }
+  function genChaotic(len) { let out = ''; for (let i = 0; i < len; i++) out += choice(SYMBOLS); return out; }
+  function genEqual(n) { let chars = shuffle(SYMBOLS.slice()).slice(0, n); const repeatCount = randInt(2, 3); let arr = []; for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars); return shuffle(arr).join(''); }
+  function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s; } return out.slice(0, len); }
+  function genTriples(len) { len = Math.floor(len / 3) * 3; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s + s; } return out.slice(0, len); }
 
   // ================= Classifier =================
   function classify(seq) {
@@ -186,13 +122,17 @@
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
-    // Detect pairs and triples separately (do not override other tags)
+    // Detect pairs and triples separately, counting all occurrences
     let i = 0;
     while (i < len) {
       let count = 1;
       while (i + count < len && chars[i + count] === chars[i]) count++;
-      if (count >= 2) tags.push('pair');
-      if (count >= 3) tags.push('triple');
+      if (count >= 2) {
+        for (let j = 0; j < count - 1; j++) tags.push('pair');
+      }
+      if (count >= 3) {
+        for (let j = 0; j < count - 2; j++) tags.push('triple');
+      }
       i += count;
     }
 
