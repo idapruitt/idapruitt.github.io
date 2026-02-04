@@ -1,1 +1,139 @@
-f
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pattern Generator</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f14;
+      color: #e6e6eb;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+    }
+    p {
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    button {
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #1f1f2e;
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover {
+      background: #2c2c44;
+      transform: translateY(-1px);
+    }
+    .output {
+      font-size: 2rem;
+      letter-spacing: 0.4rem;
+      padding: 24px;
+      background: #14141d;
+      border-radius: 16px;
+      min-height: 72px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pattern Generator</h1>
+  <p>Click a pattern style to generate a random sequence (symbols 1–4, length 2–10).</p>
+
+  <div class="controls">
+    <button onclick="generate('uniform')">Uniform</button>
+    <button onclick="generate('alternating')">Alternating</button>
+    <button onclick="generate('paired')">Paired / Blocked</button>
+    <button onclick="generate('symmetric')">Symmetric</button>
+    <button onclick="generate('repeating')">Repeating Motif</button>
+    <button onclick="generate('dominant')">Dominant Symbol</button>
+    <button onclick="generate('chaotic')">Chaotic</button>
+    <button onclick="generate('hybrid')">Hybrid</button>
+  </div>
+
+  <div class="output" id="output"></div>
+
+  <script>
+    const symbols = [1, 2, 3, 4];
+
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function choice(arr) {
+      return arr[randInt(0, arr.length - 1)];
+    }
+
+    function generate(type) {
+      const len = randInt(2, 10);
+      let seq = [];
+
+      switch (type) {
+        case 'uniform': {
+          const s = choice(symbols);
+          seq = Array(len).fill(s);
+          break;
+        }
+        case 'alternating': {
+          const [a, b] = symbols.sort(() => 0.5 - Math.random()).slice(0, 2);
+          seq = Array.from({ length: len }, (_, i) => (i % 2 === 0 ? a : b));
+          break;
+        }
+        case 'paired': {
+          while (seq.length < len) {
+            const s = choice(symbols);
+            const block = randInt(2, 3);
+            for (let i = 0; i < block && seq.length < len; i++) seq.push(s);
+          }
+          break;
+        }
+        case 'symmetric': {
+          const half = Math.floor(len / 2);
+          const left = Array.from({ length: half }, () => choice(symbols));
+          const mid = len % 2 ? [choice(symbols)] : [];
+          seq = [...left, ...mid, ...left.slice().reverse()];
+          break;
+        }
+        case 'repeating': {
+          const motifLen = randInt(2, Math.min(4, len));
+          const motif = Array.from({ length: motifLen }, () => choice(symbols));
+          while (seq.length < len) seq.push(motif[seq.length % motif.length]);
+          break;
+        }
+        case 'dominant': {
+          const dominant = choice(symbols);
+          seq = Array.from({ length: len }, () =>
+            Math.random() < 0.6 ? dominant : choice(symbols.filter(s => s !== dominant))
+          );
+          break;
+        }
+        case 'chaotic': {
+          seq = Array.from({ length: len }, () => choice(symbols));
+          break;
+        }
+        case 'hybrid': {
+          const split = randInt(1, len - 1);
+          const first = Array.from({ length: split }, () => choice(symbols));
+          const second = Array.from({ length: len - split }, () => choice(symbols));
+          seq = [...first, ...second];
+          break;
+        }
+      }
+
+      document.getElementById('output').textContent = seq.join(' ');
+    }
+  </script>
+</body>
+</html>
