@@ -77,6 +77,7 @@
     <button onclick="run('pairs')">Pairs</button>
     <button onclick="run('triples')">Triples</button>
     <button onclick="run('block')">Block</button>
+    <button onclick="run('symalt')">Symmetric Alternating</button>
   </div>
 
   <div class="output" id="output"></div>
@@ -127,6 +128,15 @@
     for (let i = 0; i < blockSizes.length; i++) {
       out = out.concat(Array(blockSizes[i]).fill(usedChars[i % usedChars.length]));
     }
+    return out;
+  }
+  function genSymAlt(len) {
+    if (len % 2 !== 0) len -= 1; if (len < 4) len = 4;
+    const a = randInt(0,3);
+    let b; do { b = randInt(0,3); } while (b === a);
+    let out = [];
+    for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b);
+    out[len-1] = a; // ensure ends on first symbol
     return out;
   }
 
@@ -196,6 +206,7 @@
       case 'pairs': seq=genPairs(len); break;
       case 'triples': seq=genTriples(len); break;
       case 'block': seq=genBlock(len); break;
+      case 'symalt': seq=genSymAlt(len); break;
     }
     const perceived=classify(seq);
     document.getElementById('output').innerHTML = mapSymbols(seq);
