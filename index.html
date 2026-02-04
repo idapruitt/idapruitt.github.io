@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #ab913c;
+      background: #ab4e3c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -65,6 +65,8 @@
     <button onclick="run('equal2')">Equal 2 Chars</button>
     <button onclick="run('equal3')">Equal 3 Chars</button>
     <button onclick="run('equal4')">Equal 4 Chars</button>
+    <button onclick="run('pairs')">Pairs</button>
+    <button onclick="run('triples')">Triples</button>
   </div>
 
   <div class="output" id="output"></div>
@@ -84,6 +86,7 @@
     return arr;
   }
 
+  // ================= Generators =================
   function genUniform(len) { const s = choice(SYMBOLS); return s.repeat(len); }
 
   function genAlternating(len) {
@@ -124,7 +127,6 @@
   }
 
   function genEqual(n) {
-    // pick n distinct symbols from the full set
     let chars = shuffle(SYMBOLS.slice()).slice(0, n);
     const repeatCount = randInt(2, 3);
     let arr = [];
@@ -132,6 +134,25 @@
     return shuffle(arr).join('');
   }
 
+  function genPairs(len) {
+    let out = '';
+    while (out.length < len) {
+      const s = choice(SYMBOLS);
+      out += s + s;
+    }
+    return out.slice(0, len);
+  }
+
+  function genTriples(len) {
+    let out = '';
+    while (out.length < len) {
+      const s = choice(SYMBOLS);
+      out += s + s + s;
+    }
+    return out.slice(0, len);
+  }
+
+  // ================= Classifier =================
   function classify(seq) {
     const chars = seq.split('');
     const len = chars.length;
@@ -163,10 +184,21 @@
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
+    // Detect pairs and triples
+    let i = 0;
+    while (i < len) {
+      let count = 1;
+      while (i + count < len && chars[i + count] === chars[i]) count++;
+      if (count >= 2) tags.push('pair');
+      if (count >= 3) tags.push('triple');
+      i += count;
+    }
+
     if (tags.length === 0) tags.push('chaotic');
     return tags;
   }
 
+  // ================= Dispatch =================
   function run(type) {
     let len = randInt(2, 10);
     let seq;
@@ -180,6 +212,8 @@
       case 'equal2': seq = genEqual(2); break;
       case 'equal3': seq = genEqual(3); break;
       case 'equal4': seq = genEqual(4); break;
+      case 'pairs': seq = genPairs(len); break;
+      case 'triples': seq = genTriples(len); break;
     }
     const perceived = classify(seq);
     document.getElementById('output').textContent = seq.split('').join(' ');
