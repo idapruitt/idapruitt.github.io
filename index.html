@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #543b6e;
+  background: #3b6e6d;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -340,13 +340,25 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ---------- response types ----------
   function symbolSwap(seq) {
-    const unique = [...new Set(seq)]
-    if (unique.length < 2) return seq.slice()
-    const available = shuffle([0,1,2,3])
-    const map = {}
-    unique.forEach((s, i) => map[s] = available[i])
-    return seq.map(s => map[s])
+  if (!seq || !seq.length) return seq
+
+  const unique = [...new Set(seq)]
+  const available = [0,1,2,3]
+
+  // if uniform, replace symbol with a different random symbol
+  if (unique.length === 1) {
+    const current = unique[0]
+    let newSymbol
+    do { newSymbol = choice(available) } while (newSymbol === current)
+    return Array(seq.length).fill(newSymbol)
   }
+
+  // otherwise, do standard symbol remap
+  const map = {}
+  const shuffled = shuffle(available)
+  unique.forEach((s,i) => map[s] = shuffled[i])
+  return seq.map(s => map[s])
+}
 
   function randomResponse() {
     const len = Math.floor(Math.random() * 9) + 2 // 2–10
