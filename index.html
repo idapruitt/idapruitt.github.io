@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #3c71ab;
+      background: #58ab3c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -67,6 +67,7 @@
     <button onclick="run('equal4')">Equal 4 Chars</button>
     <button onclick="run('pairs')">Pairs</button>
     <button onclick="run('triples')">Triples</button>
+    <button onclick="run('block')">Block</button>
   </div>
 
   <div class="output" id="output"></div>
@@ -88,6 +89,24 @@
   function genEqual(n) { let chars = shuffle(SYMBOLS.slice()).slice(0, n); const repeatCount = randInt(2, 3); let arr = []; for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars); return shuffle(arr).join(''); }
   function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = ''; while (out.length < len) { const s = choice(SYMBOLS); out += s + s; } return out.slice(0, len); }
   function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = ''; for (let i = 0; i < tripleCount; i++) out += choice(SYMBOLS).repeat(3); return out; }
+  function genBlock(len) {
+    if (len < 4) len = 4;
+    let numBlocks = randInt(2, Math.min(4, len / 2));
+    let blockSizes = [];
+    let remaining = len;
+    for (let i = 0; i < numBlocks - 1; i++) {
+      let size = randInt(2, remaining - 2*(numBlocks - i - 1));
+      blockSizes.push(size);
+      remaining -= size;
+    }
+    blockSizes.push(remaining);
+    let usedChars = shuffle(SYMBOLS.slice());
+    let out = '';
+    for (let i = 0; i < blockSizes.length; i++) {
+      out += usedChars[i % usedChars.length].repeat(blockSizes[i]);
+    }
+    return out;
+  }
 
   // ================= Classifier =================
   function classify(seq) {
@@ -121,7 +140,7 @@
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
-    // Detect number of pairs and triples separately
+    // Detect pairs, triples, and in a row sequences
     let i = 0;
     let pairCount = 0;
     let tripleCount = 0;
@@ -130,16 +149,25 @@
       while (i + count < len && chars[i + count] === chars[i]) count++;
       if (count >= 2) pairCount += Math.floor(count / 2);
       if (count >= 3) tripleCount += Math.floor(count / 3);
-
-      // Add in a generic "inarow" perception for sequences of length 4+ up to the count
       for (let n = 4; n <= count; n++) tags.push(n + 'inarow');
-
       i += count;
     }
     if (pairCount > 0) tags.push(pairCount + 'pair');
     if (tripleCount > 0) tags.push(tripleCount + 'triple');
 
-    if (!tags.some(t => ['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic'].includes(t))) tags.push('chaotic');
+    // Detect block pattern
+    const minRun = 2;
+    let runs = [];
+    i = 0;
+    while (i < len) {
+      let count = 1;
+      while (i + count < len && chars[i + count] === chars[i]) count++;
+      runs.push(count);
+      i += count;
+    }
+    if (runs.every(r => r >= minRun) && uniqueCount >= 2) tags.push('block');
+
+    if (!tags.some(t => ['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic','block'].includes(t))) tags.push('chaotic');
 
     return tags;
   }
@@ -160,6 +188,7 @@
       case 'equal4': seq = genEqual(4); break;
       case 'pairs': seq = genPairs(len); break;
       case 'triples': seq = genTriples(len); break;
+      case 'block': seq = genBlock(len); break;
     }
     const perceived = classify(seq);
     document.getElementById('output').textContent = seq.split('').join(' ');
