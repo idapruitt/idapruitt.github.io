@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #6e3b54;
+  background: #3b3b6e;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -414,6 +414,97 @@ window.addEventListener('DOMContentLoaded', () => {
 
 })
 
+/* ===============================
+   RESPONSE EVALUATOR WITH TAG COMPARISON
+   =============================== */
+window.addEventListener('DOMContentLoaded', () => {
+
+  // ---------- Compare two sequences ----------
+  function evaluateSequence(original, response) {
+    if (!original || !response) return null
+    const len = Math.min(original.length, response.length)
+
+    // exact matches at same positions
+    let exact = 0
+    for (let i = 0; i < len; i++) if (original[i] === response[i]) exact++
+
+    // count symbols used (ignoring order)
+    const originalCounts = {}
+    const responseCounts = {}
+    original.forEach(n => originalCounts[n] = (originalCounts[n]||0)+1)
+    response.forEach(n => responseCounts[n] = (responseCounts[n]||0)+1)
+
+    let symbolMatches = 0
+    Object.keys(originalCounts).forEach(k => {
+      const o = originalCounts[k] || 0
+      const r = responseCounts[k] || 0
+      symbolMatches += Math.min(o,r)
+    })
+
+    // number of differences
+    const changes = Math.abs(original.length - response.length) + (len - exact)
+
+    // perceived tags
+    const origTags = classify(original).tags
+    const respTags = classify(response).tags
+    const matchingTags = origTags.filter(t => respTags.includes(t))
+    const missingTags = origTags.filter(t => !respTags.includes(t))
+    const extraTags = respTags.filter(t => !origTags.includes(t))
+
+    return {
+      exactMatchPct: ((exact / len) * 100).toFixed(1),
+      symbolMatchPct: ((symbolMatches / original.length) * 100).toFixed(1),
+      changes,
+      originalLength: original.length,
+      responseLength: response.length,
+      matchingTags,
+      missingTags,
+      extraTags
+    }
+  }
+
+  // ---------- Button response evaluator ----------
+  function evaluateButtonResponse() {
+    const original = readCurrentSequence()
+    const responseNodes = document.querySelectorAll('#response-output .number')
+    if (!responseNodes.length) return
+    const response = Array.from(responseNodes).map(n => Number(n.textContent) - 1)
+
+    const result = evaluateSequence(original, response)
+    if (!result) return
+
+    document.getElementById('response-meta').textContent +=
+      ` | evaluation: exact ${result.exactMatchPct}% | symbols ${result.symbolMatchPct}% | changes ${result.changes}` +
+      ` | tags match: ${result.matchingTags.join(', ')} | missing: ${result.missingTags.join(', ')} | extra: ${result.extraTags.join(', ')}`
+  }
+
+  // ---------- Manual response evaluator ----------
+  function evaluateManualResponse() {
+    const original = readCurrentSequence()
+    const responseNodes = document.querySelectorAll('#manual-output .number')
+    if (!responseNodes.length) return
+    const response = Array.from(responseNodes).map(n => Number(n.textContent) - 1)
+
+    const result = evaluateSequence(original, response)
+    if (!result) return
+
+    document.getElementById('manual-meta').textContent +=
+      ` | evaluation: exact ${result.exactMatchPct}% | symbols ${result.symbolMatchPct}% | changes ${result.changes}` +
+      ` | tags match: ${result.matchingTags.join(', ')} | missing: ${result.missingTags.join(', ')} | extra: ${result.extraTags.join(', ')}`
+  }
+
+  // ---------- Add evaluate buttons ----------
+  const evalButtonResp = document.createElement('button')
+  evalButtonResp.textContent = 'Evaluate Button Response'
+  evalButtonResp.onclick = evaluateButtonResponse
+  document.querySelector('.controls').appendChild(evalButtonResp)
+
+  const evalButtonManual = document.createElement('button')
+  evalButtonManual.textContent = 'Evaluate Manual Response'
+  evalButtonManual.onclick = evaluateManualResponse
+  document.querySelector('.controls').appendChild(evalButtonManual)
+
+})
 
 </script>
 
