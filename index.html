@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #f0793a;
+      background: #f03a64;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -114,24 +114,33 @@
 
   // ================= Generators =================
   function genUniform(len) { const s = randInt(0,3); return Array(len).fill(s); }
+
   function genAlternating(len) { if (len % 2 !== 0) len -= 1; if (len < 4) len = 4; const a = randInt(0,3); let b; do { b = randInt(0,3); } while (b === a); let out = []; for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b); return out; }
+
   function genSymAlt(len) { if (len % 2 === 0) len -= 1; if (len < 3) len = 3; const a = randInt(0,3); let b; do { b = randInt(0,3); } while (b === a); let out = []; for (let i = 0; i < len; i++) out.push(i % 2 === 0 ? a : b); return out; }
+
   function genSymmetric(len) { const half = Math.ceil(len / 2); let left = []; for (let i = 0; i < half; i++) left.push(randInt(0,3)); const right = left.slice(0, len / 2).reverse(); return left.concat(right); }
+
   function genRepeating(len) { const motifLen = Math.random() < 0.5 ? 3 : 4; const minLen = motifLen * 2; if (len < minLen) len = minLen; len = Math.floor(len / motifLen) * motifLen; let motif = []; for (let i = 0; i < motifLen; i++) motif.push(randInt(0,3)); let out = []; while (out.length < len) out = out.concat(motif); return out.slice(0,len); }
+
   function genDominant(len) { const dom = randInt(0,3); let out = []; for (let i = 0; i < len; i++) out.push(Math.random() < 0.65 ? dom : randInt(0,3)); return out; }
+
   function genChaotic(len) { let out = []; for (let i = 0; i < len; i++) out.push(randInt(0,3)); return out; }
+
   function genEqual(n) {
     let chars = shuffle([0,1,2,3]).slice(0,n);
     let arr = [];
     chars.forEach(c => { arr.push(c); if(Math.random()<0.5) arr.push(c); });
-    arr = shuffle(arr);
-    return arr;
+    return shuffle(arr);
   }
+
   function genPairs(len) { if (len % 2 !== 0) len -= 1; let out = []; while (out.length < len) { const s = randInt(0,3); out.push(s,s); } return out.slice(0,len); }
-  function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = []; for (let i = 0; i < tripleCount; i++) out = out.concat(Array(3).fill(randInt(0,3))); return out.slice(0,len); }
+
+  function genTriples(len) { let tripleCount = Math.floor(len / 3); if (tripleCount < 1) tripleCount = 1; let out = []; for (let i = 0; i < tripleCount; i++) { const s = randInt(0,3); out = out.concat([s,s,s]); } return out.slice(0,len); }
+
   function genBlock(len) {
     if (len < 4) len = 4;
-    let numBlocks = randInt(2, Math.min(4, len / 2));
+    let numBlocks = randInt(2, Math.min(4, Math.floor(len/2)));
     let blockSizes = [];
     let remaining = len;
     for (let i = 0; i < numBlocks - 1; i++) {
