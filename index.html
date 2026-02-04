@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #ab3c5d;
+      background: #9cab3c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -74,7 +74,6 @@
 
 <script>
   const SYMBOLS = ['1','2','3','4'];
-
   function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
   function choice(arr) { return arr[randInt(0, arr.length - 1)]; }
   function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = randInt(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
@@ -122,19 +121,19 @@
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
-    // Detect pairs and triples separately, counting all occurrences
+    // Detect number of pairs and triples separately
     let i = 0;
+    let pairCount = 0;
+    let tripleCount = 0;
     while (i < len) {
       let count = 1;
       while (i + count < len && chars[i + count] === chars[i]) count++;
-      if (count >= 2) {
-        for (let j = 0; j < count - 1; j++) tags.push('pair');
-      }
-      if (count >= 3) {
-        for (let j = 0; j < count - 2; j++) tags.push('triple');
-      }
+      if (count >= 2) pairCount += Math.floor(count / 2);
+      if (count >= 3) tripleCount += Math.floor(count / 3);
       i += count;
     }
+    if (pairCount > 0) tags.push(pairCount + 'pair');
+    if (tripleCount > 0) tags.push(tripleCount + 'triple');
 
     if (!tags.some(t => ['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic'].includes(t))) tags.push('chaotic');
 
