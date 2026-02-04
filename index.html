@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #3cab47;
+      background: #ab913c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -124,10 +124,8 @@
   }
 
   function genEqual(n) {
-    let chars = [];
-    for (let i = 0; i < n; i++) {
-      chars.push(choice(SYMBOLS));
-    }
+    // pick n distinct symbols from the full set
+    let chars = shuffle(SYMBOLS.slice()).slice(0, n);
     const repeatCount = randInt(2, 3);
     let arr = [];
     for (let i = 0; i < repeatCount; i++) arr = arr.concat(chars);
