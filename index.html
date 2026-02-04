@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #ab4e3c;
+      background: #3cab80;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -135,6 +135,7 @@
   }
 
   function genPairs(len) {
+    if (len % 2 !== 0) len -= 1;
     let out = '';
     while (out.length < len) {
       const s = choice(SYMBOLS);
@@ -144,6 +145,7 @@
   }
 
   function genTriples(len) {
+    len = Math.floor(len / 3) * 3;
     let out = '';
     while (out.length < len) {
       const s = choice(SYMBOLS);
@@ -184,7 +186,7 @@
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
     if (uniqueCount === 4 && equalCounts) tags.push('equal4');
 
-    // Detect pairs and triples
+    // Detect pairs and triples separately (do not override other tags)
     let i = 0;
     while (i < len) {
       let count = 1;
@@ -194,7 +196,8 @@
       i += count;
     }
 
-    if (tags.length === 0) tags.push('chaotic');
+    if (!tags.some(t => ['uniform','alternating','symmetric','repeating','dominant','equal2','equal3','equal4','chaotic'].includes(t))) tags.push('chaotic');
+
     return tags;
   }
 
