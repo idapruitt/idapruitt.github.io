@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #4287f5;
+  background: #42f581;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -285,20 +285,27 @@ function run(type){
 
 
 /* ===============================
-   RESPONSE GENERATOR (ISOLATED, FIXED)
+   RESPONSE GENERATOR (SAFE MODE)
    =============================== */
 
-function getSourceSequence() {
-  // Reads numbers directly from existing output
+/* --- extract numeric sequence from rendered output --- */
+function readCurrentSequence() {
   const nodes = document.querySelectorAll('#output .number')
-  return Array.from(nodes).map(n => n.textContent.trim())
+  return Array.from(nodes).map(n => parseInt(n.textContent, 10) - 1)
 }
 
-function renderResponse(seq) {
-  document.getElementById('response-output').textContent =
-    seq.length ? seq.join('') : '(no sequence)'
+/* --- render response using existing system --- */
+function renderResponse(seq, intent) {
+  if (!seq || !seq.length) return
+
+  const result = classify(seq)
+
+  document.getElementById('response-output').innerHTML = mapSymbols(seq)
+  document.getElementById('response-meta').textContent =
+    `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${result.symbols.join(', ')} | length: ${seq.length}`
 }
 
+/* --- utils --- */
 function shuffleArray(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -308,42 +315,37 @@ function shuffleArray(arr) {
   return a
 }
 
-/* ---------- Button wiring ---------- */
-
+/* --- buttons --- */
 document.getElementById('resp-copy').onclick = () => {
-  const seq = getSourceSequence()
-  renderResponse(seq)
+  const seq = readCurrentSequence()
+  renderResponse(seq, 'response-copy')
 }
 
 document.getElementById('resp-reverse').onclick = () => {
-  const seq = getSourceSequence()
-  renderResponse([...seq].reverse())
+  const seq = readCurrentSequence()
+  renderResponse([...seq].reverse(), 'response-reverse')
 }
 
 document.getElementById('resp-scramble').onclick = () => {
-  const seq = getSourceSequence()
-  renderResponse(shuffleArray(seq))
+  const seq = readCurrentSequence()
+  renderResponse(shuffleArray(seq), 'response-scramble')
 }
 
 
 </script>
 
-<hr style="margin:30px 0">
+<hr style="margin:32px 0; opacity:0.2">
 
 <h2>Response Generator</h2>
 
-<button id="resp-copy">Full copy</button>
-<button id="resp-reverse">Reverse</button>
-<button id="resp-scramble">Scramble</button>
+<div class="controls">
+  <button id="resp-copy">Full Copy</button>
+  <button id="resp-reverse">Reverse</button>
+  <button id="resp-scramble">Scramble</button>
+</div>
 
-<div id="response-output" style="
-  margin-top:12px;
-  padding:10px;
-  background:#1b1b1b;
-  border:1px solid #333;
-  min-height:32px;
-  font-size:22px;
-"></div>
+<div class="output" id="response-output"></div>
+<div class="meta" id="response-meta"></div>
 
 </body>
 
