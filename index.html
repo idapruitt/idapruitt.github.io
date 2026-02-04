@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #54ab3c;
+      background: #ab3c9c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -116,10 +116,10 @@
   }
 
   function genEqual(n) {
-    let chars = SYMBOLS.slice(0, n);
-    let len = n * 2;
+    const chars = SYMBOLS.slice(0, n);
+    const repeatCount = randInt(2, 3); // random number of repeats for variety
     let out = '';
-    for (let i = 0; i < 2; i++) out += chars.join('');
+    for (let i = 0; i < repeatCount; i++) out += chars.join('');
     return out;
   }
 
@@ -149,7 +149,6 @@
       if (motif.repeat(len / size) === seq) { tags.push('repeating'); break; }
     }
 
-    // equal number tags
     const equalCounts = Object.values(counts).every(c => c === counts[chars[0]]);
     if (uniqueCount === 2 && equalCounts) tags.push('equal2');
     if (uniqueCount === 3 && equalCounts) tags.push('equal3');
