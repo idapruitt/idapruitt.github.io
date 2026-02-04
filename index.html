@@ -7,7 +7,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #3b3b6e;
+  background: #5b3b6e;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -415,96 +415,174 @@ window.addEventListener('DOMContentLoaded', () => {
 })
 
 /* ===============================
-   RESPONSE EVALUATOR WITH TAG COMPARISON
+   RESPONSE GENERATOR + EVALUATOR
    =============================== */
 window.addEventListener('DOMContentLoaded', () => {
 
-  // ---------- Compare two sequences ----------
+  const RESPONSE_SYMBOLS = [
+    { char: '♥', class: 'heart', name: 'heart' },
+    { char: '★', class: 'star', name: 'star' },
+    { char: '▲', class: 'triangle', name: 'tri' },
+    { char: '✖', class: 'xmark', name: 'x' }
+  ]
+
+  // -------- Utilities --------
+  function readCurrentSequence() {
+    const nodes = document.querySelectorAll('#output .number')
+    if (!nodes.length) return null
+    return Array.from(nodes).map(n => Number(n.textContent) - 1)
+  }
+
+  function shuffle(arr) {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j], a[i]]
+    }
+    return a
+  }
+
+  function choice(arr) { return arr[Math.floor(Math.random() * arr.length)] }
+
+  // -------- Renderer --------
+  function renderSymbols(seq) {
+    return seq.map(c => {
+      const s = RESPONSE_SYMBOLS[c]
+      return `
+        <div class="symbol-container">
+          <span class="symbol ${s.class}">${s.char}</span>
+          <span class="number">${c + 1}</span>
+        </div>
+      `
+    }).join('')
+  }
+
+  function outputResponse(seq, intent, outputId='response-output', metaId='response-meta') {
+    if (!seq || !seq.length) return
+    const result = classify(seq) // uses your global classifier
+    document.getElementById(outputId).innerHTML = renderSymbols(seq)
+
+    // evaluation
+    const original = readCurrentSequence()
+    const evalResult = evaluateSequence(original, seq)
+
+    const symbolsUsed = [...new Set(seq.map(c=>RESPONSE_SYMBOLS[c].name))]
+    document.getElementById(metaId).textContent =
+      `intent: ${intent} | perceived: ${result.tags.join(', ')} | symbols: ${symbolsUsed.join(', ')} | length: ${seq.length}` +
+      (evalResult ? 
+        ` | exact ${evalResult.exactMatchPct}% | symbols ${evalResult.symbolMatchPct}% | changes ${evalResult.changes}` +
+        ` | tags match: ${evalResult.matchingTags.join(', ')} | missing: ${evalResult.missingTags.join(', ')} | extra: ${evalResult.extraTags.join(', ')}`
+        : '')
+  }
+
+  // -------- Response types --------
+  function symbolSwap(seq) {
+    if (!seq || !seq.length) return seq
+    const unique = [...new Set(seq)]
+    const available = [0,1,2,3]
+
+    if (unique.length === 1) {
+      const current = unique[0]
+      let newSymbol
+      do { newSymbol = choice(available) } while (newSymbol === current)
+      return Array(seq.length).fill(newSymbol)
+    }
+
+    const map = {}
+    const shuffled = shuffle(available)
+    unique.forEach((s,i) => map[s] = shuffled[i])
+    return seq.map(s => map[s])
+  }
+
+  function randomResponse() {
+    const len = Math.floor(Math.random() * 9) + 2
+    const out = []
+    for (let i = 0; i < len; i++) out.push(Math.floor(Math.random() * 4))
+    return out
+  }
+
+  function takeover(seq) {
+    if (!seq || !seq.length) return seq
+    const chosen = choice(seq)
+    return Array(seq.length).fill(chosen)
+  }
+
+  // -------- Sequence evaluation ----------
   function evaluateSequence(original, response) {
     if (!original || !response) return null
     const len = Math.min(original.length, response.length)
 
-    // exact matches at same positions
+    // exact matches
     let exact = 0
-    for (let i = 0; i < len; i++) if (original[i] === response[i]) exact++
+    for (let i=0;i<len;i++) if (original[i]===response[i]) exact++
 
-    // count symbols used (ignoring order)
+    // symbol match
     const originalCounts = {}
     const responseCounts = {}
-    original.forEach(n => originalCounts[n] = (originalCounts[n]||0)+1)
-    response.forEach(n => responseCounts[n] = (responseCounts[n]||0)+1)
-
-    let symbolMatches = 0
-    Object.keys(originalCounts).forEach(k => {
-      const o = originalCounts[k] || 0
-      const r = responseCounts[k] || 0
+    original.forEach(n=>originalCounts[n]=(originalCounts[n]||0)+1)
+    response.forEach(n=>responseCounts[n]=(responseCounts[n]||0)+1)
+    let symbolMatches=0
+    Object.keys(originalCounts).forEach(k=>{
+      const o=originalCounts[k]||0
+      const r=responseCounts[k]||0
       symbolMatches += Math.min(o,r)
     })
 
-    // number of differences
-    const changes = Math.abs(original.length - response.length) + (len - exact)
+    const changes = Math.abs(original.length-response.length)+(len-exact)
 
-    // perceived tags
     const origTags = classify(original).tags
     const respTags = classify(response).tags
-    const matchingTags = origTags.filter(t => respTags.includes(t))
-    const missingTags = origTags.filter(t => !respTags.includes(t))
-    const extraTags = respTags.filter(t => !origTags.includes(t))
+    const matchingTags = origTags.filter(t=>respTags.includes(t))
+    const missingTags = origTags.filter(t=>!respTags.includes(t))
+    const extraTags = respTags.filter(t=>!origTags.includes(t))
 
     return {
-      exactMatchPct: ((exact / len) * 100).toFixed(1),
-      symbolMatchPct: ((symbolMatches / original.length) * 100).toFixed(1),
+      exactMatchPct: ((exact/len)*100).toFixed(1),
+      symbolMatchPct: ((symbolMatches/original.length)*100).toFixed(1),
       changes,
-      originalLength: original.length,
-      responseLength: response.length,
       matchingTags,
       missingTags,
       extraTags
     }
   }
 
-  // ---------- Button response evaluator ----------
-  function evaluateButtonResponse() {
-    const original = readCurrentSequence()
-    const responseNodes = document.querySelectorAll('#response-output .number')
-    if (!responseNodes.length) return
-    const response = Array.from(responseNodes).map(n => Number(n.textContent) - 1)
-
-    const result = evaluateSequence(original, response)
-    if (!result) return
-
-    document.getElementById('response-meta').textContent +=
-      ` | evaluation: exact ${result.exactMatchPct}% | symbols ${result.symbolMatchPct}% | changes ${result.changes}` +
-      ` | tags match: ${result.matchingTags.join(', ')} | missing: ${result.missingTags.join(', ')} | extra: ${result.extraTags.join(', ')}`
+  // -------- Bind buttons ----------
+  const buttonMap = {
+    'resp-copy': seq=>seq,
+    'resp-reverse': seq=>seq && [...seq].reverse(),
+    'resp-scramble': seq=>seq && shuffle(seq),
+    'resp-swap': seq=>seq && symbolSwap(seq),
+    'resp-random': ()=>randomResponse(),
+    'resp-takeover': seq=>seq && takeover(seq)
   }
 
-  // ---------- Manual response evaluator ----------
-  function evaluateManualResponse() {
-    const original = readCurrentSequence()
-    const responseNodes = document.querySelectorAll('#manual-output .number')
-    if (!responseNodes.length) return
-    const response = Array.from(responseNodes).map(n => Number(n.textContent) - 1)
+  Object.entries(buttonMap).forEach(([id,func])=>{
+    const btn=document.getElementById(id)
+    if(!btn) return
+    btn.onclick=()=>{
+      const seq = ['resp-random'].includes(id) ? null : readCurrentSequence()
+      outputResponse(func(seq), `response-${id.replace('resp-','')}`)
+    }
+  })
 
-    const result = evaluateSequence(original, response)
-    if (!result) return
-
-    document.getElementById('manual-meta').textContent +=
-      ` | evaluation: exact ${result.exactMatchPct}% | symbols ${result.symbolMatchPct}% | changes ${result.changes}` +
-      ` | tags match: ${result.matchingTags.join(', ')} | missing: ${result.missingTags.join(', ')} | extra: ${result.extraTags.join(', ')}`
+  // -------- Manual input ----------
+  const manualSubmit = document.getElementById('manual-submit')
+  if(manualSubmit){
+    manualSubmit.onclick = ()=>{
+      const input = document.getElementById('manual-input').value.trim()
+      if(!input) return
+      const seq=[]
+      for(let ch of input){
+        const n=Number(ch)
+        if(n>=1&&n<=4) seq.push(n-1)
+      }
+      if(!seq.length) return alert('Invalid input: use digits 1-4 only')
+      outputResponse(seq,'manual-input','manual-output','manual-meta')
+    }
   }
-
-  // ---------- Add evaluate buttons ----------
-  const evalButtonResp = document.createElement('button')
-  evalButtonResp.textContent = 'Evaluate Button Response'
-  evalButtonResp.onclick = evaluateButtonResponse
-  document.querySelector('.controls').appendChild(evalButtonResp)
-
-  const evalButtonManual = document.createElement('button')
-  evalButtonManual.textContent = 'Evaluate Manual Response'
-  evalButtonManual.onclick = evaluateManualResponse
-  document.querySelector('.controls').appendChild(evalButtonManual)
 
 })
+
 
 </script>
 
