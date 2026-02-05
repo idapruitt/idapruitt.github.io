@@ -6,7 +6,7 @@
 <style>
 body {
   font-family: system-ui, sans-serif;
-  background: #2d7d4d;
+  background: #0f0f14;
   color: #e6e6eb;
   padding: 24px;
 }
@@ -132,22 +132,105 @@ function choice(arr){return arr[randInt(0,arr.length-1)];}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;}
 function mapSymbols(seq){return seq.map(i=>`<div class='symbol-container'><span class='symbol ${SYMBOLS[i].class}'>${SYMBOLS[i].char}</span><span class='number'>${i+1}</span></div>`).join('');}
 
-// ========== Generators ==========
-function genUniform(len){return Array(len).fill(randInt(0,3));}
-function genAlternating(len){if(len%2!==0) len--; if(len<4) len=4; let a=randInt(0,3), b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2===0?a:b);}
-function genSymAlt(len){if(len%2===0) len--; if(len<3) len=3; let a=randInt(0,3), b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2===0?a:b);}
-function genSymmetric(len){const half=Math.ceil(len/2); const left=Array.from({length:half},()=>randInt(0,3)); return left.concat(left.slice(0,Math.floor(len/2)).reverse());}
-function genRepeating(len){const size=Math.random()<0.5?3:4; if(len<size*2) len=size*2; len=Math.floor(len/size)*size; const motif=Array.from({length:size},()=>randInt(0,3)); return Array.from({length:len},(_,i)=>motif[i%size]);}
-function genDominant(len){const d=randInt(0,3); return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3));}
-function genChaotic(len){return Array.from({length:len},()=>randInt(0,3));}
+// ================= Generators =================
+const genUniform = len => Array(len).fill(randInt(0,3));
 
-// ---- Equal & special generators (use latest versions) ----
-function genEqual2(){const reps=randInt(1,5); const syms=shuffle([0,1,2,3]).slice(0,2); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out);}
-function genEqual3(){const reps=randInt(1,3); const syms=shuffle([0,1,2,3]).slice(0,3); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out);}
-function genEqual4(){const reps=randInt(1,2); let out=[]; for(let i=0;i<reps;i++) out.push(0,1,2,3); return shuffle(out);}
-function genPairs(len){if(len%2!==0) len--; let out=[]; while(out.length<len){const s=randInt(0,3); out.push(s,s);} return out;}
-function genTriples(len){const reps=Math.max(1,Math.floor(len/3)); let out=[]; for(let i=0;i<reps;i++){const s=randInt(0,3); out.push(s,s,s);} return out;}
-function genBlock(len){if(len<4) len=4; const blocks=randInt(2,Math.min(4,Math.floor(len/2))); let remaining=len; let sizes=[]; for(let i=0;i<blocks-1;i++){const size=randInt(2,remaining-2*(blocks-i-1)); sizes.push(size); remaining-=size;} sizes.push(remaining); const syms=shuffle([0,1,2,3]); let out=[]; sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i]))); return out;}
+function genAlternating(len){
+  if(len%2!==0) len--;
+  if(len<4) len=4;
+  let a=randInt(0,3), b;
+  do{ b=randInt(0,3); } while(b===a);
+  return Array.from({length:len},(_,i)=>i%2===0?a:b);
+}
+
+function genSymAlt(len){
+  if(len%2===0) len--;
+  if(len<3) len=3;
+  let a=randInt(0,3), b;
+  do{ b=randInt(0,3); } while(b===a);
+  return Array.from({length:len},(_,i)=>i%2===0?a:b);
+}
+
+function genSymmetric(len){
+  const half=Math.ceil(len/2);
+  const left=Array.from({length:half},()=>randInt(0,3));
+  return left.concat(left.slice(0,Math.floor(len/2)).reverse());
+}
+
+function genRepeating(len){
+  const size=Math.random()<0.5?3:4;
+  if(len<size*2) len=size*2;
+  len=Math.floor(len/size)*size;
+  const motif=Array.from({length:size},()=>randInt(0,3));
+  return Array.from({length:len},(_,i)=>motif[i%size]);
+}
+
+function genDominant(len){
+  const d=randInt(0,3);
+  return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3));
+}
+
+const genChaotic = len => Array.from({length:len},()=>randInt(0,3));
+
+// ---- Equal generators (correct & final) ----
+function genEqual2(){
+  const reps=randInt(1,5); // 2–10
+  const syms=shuffle([0,1,2,3]).slice(0,2);
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+
+function genEqual3(){
+  const reps=randInt(1,3); // 3,6,9
+  const syms=shuffle([0,1,2,3]).slice(0,3);
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+
+function genEqual4(){
+  const reps=randInt(1,2); // 4 or 8
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(0,1,2,3);
+  return shuffle(out);
+}
+
+function genPairs(len){
+  if(len%2!==0) len--;
+  let out=[];
+  while(out.length<len){
+    const s=randInt(0,3);
+    out.push(s,s);
+  }
+  return out;
+}
+
+function genTriples(len){
+  const reps=Math.max(1,Math.floor(len/3));
+  let out=[];
+  for(let i=0;i<reps;i++){
+    const s=randInt(0,3);
+    out.push(s,s,s);
+  }
+  return out;
+}
+
+function genBlock(len){
+  if(len<4) len=4;
+  const blocks=randInt(2,Math.min(4,Math.floor(len/2)));
+  let remaining=len;
+  let sizes=[];
+  for(let i=0;i<blocks-1;i++){
+    const size=randInt(2,remaining-2*(blocks-i-1));
+    sizes.push(size); remaining-=size;
+  }
+  sizes.push(remaining);
+  const syms=shuffle([0,1,2,3]);
+  let out=[];
+  sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i])));
+  return out;
+}
 
 // ========== Classifier ==========
 function classify(seq){
