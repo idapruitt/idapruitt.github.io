@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pattern Generator Playground</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #0f0f14;
+  color: #e6e6eb;
+  padding: 24px;
+}
+h1 { font-size: 1.8rem; margin-bottom: 8px; }
+p { opacity: 0.7; margin-bottom: 24px; }
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+button {
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #1f1f2e;
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+button:hover { background: #2c2c44; }
+.output {
+  font-size: 2rem;
+  letter-spacing: 0.4rem;
+  padding: 24px;
+  background: #14141d;
+  border-radius: 16px;
+  min-height: 72px;
+  display: flex;
+  flex-wrap: wrap;
+}
+.symbol-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 0.2rem;
+}
+.symbol { font-size: 1.2rem; }
+.number { font-size: 1rem; margin-top: 2px; }
+.heart { color: #ff4d6d; }
+.star { color: #ffd700; }
+.triangle { color: #00ffff; }
+.xmark { color: #ffffff; }
+.meta { margin-top: 8px; opacity: 0.6; font-size: 0.9rem; }
+
+.feature-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.feature {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: #2a2a38;
+  color: #aaa;
+  border: 1px solid #3a3a55;
+  transition: all 0.2s ease;
+}
+.feature.true {
+  background: #1f5f3a;
+  color: #c9ffe3;
+  border-color: #2fa36a;
+}
+</style>
+</head>
+<body>
+
+<h1>Pattern Generator Playground</h1>
+<p>Generators express intent. Classifier expresses perception. Symbols above numbers: ♥1, ★2, ▲3, ✖4. Length 2–10.</p>
+
+<div class="controls">
+  <button onclick="run('uniform')">Uniform</button>
+  <button onclick="run('alternating')">Alternating</button>
+  <button onclick="run('symalt')">Symmetric Alternating</button>
+  <button onclick="run('symmetric')">Symmetric</button>
+  <button onclick="run('repeating')">Repeating Motif</button>
+  <button onclick="run('dominant')">Dominant Symbol</button>
+  <button onclick="run('chaotic')">Chaotic</button>
+  <button onclick="run('equal2')">Equal 2 Chars</button>
+  <button onclick="run('equal3')">Equal 3 Chars</button>
+  <button onclick="run('equal4')">Equal 4 Chars</button>
+  <button onclick="run('pairs')">Pairs</button>
+  <button onclick="run('triples')">Triples</button>
+  <button onclick="run('block')">Block</button>
+</div>
+
+<div class="output" id="output"></div>
+<div class="meta" id="meta"></div>
+
+<hr style="margin:32px 0; opacity:0.2">
+
+<h2>Response Generator</h2>
+<div class="controls">
+  <button onclick="respond('copy')">Copy</button>
+  <button onclick="respond('reverse')">Reverse</button>
+  <button onclick="respond('scramble')">Scramble</button>
+</div>
+
+<div class="output" id="response-output"></div>
+<div class="meta" id="response-meta"></div>
+
+<div class="controls">
+  <input type="text" id="manual-input" placeholder="Enter sequence using 1-4" style="padding:8px; border-radius:8px; width:200px;" />
+  <button id="manual-submit">Submit Manual Response</button>
+</div>
+
+<div class="output" id="manual-output"></div>
+<div class="meta" id="manual-meta"></div>
+
+<div id="response-features" class="feature-grid"></div>
+
+<script>
+const SYMBOLS = [
+  { char:'♥', class:'heart', name:'heart' },
+  { char:'★', class:'star', name:'star' },
+  { char:'▲', class:'triangle', name:'tri' },
+  { char:'✖', class:'xmark', name:'x' }
+];
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function choice(arr){return arr[randInt(0,arr.length-1)];}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function mapSymbols(seq){return seq.map(i=>`<div class='symbol-container'><span class='symbol ${SYMBOLS[i].class}'>${SYMBOLS[i].char}</span><span class='number'>${i+1}</span></div>`).join('');}
+
+// ================= Generators =================
+const genUniform = len => Array(len).fill(randInt(0,3));
+
+function genAlternating(len){
+  if(len%2!==0) len--;
+  if(len<4) len=4;
+  let a=randInt(0,3), b;
+  do{ b=randInt(0,3); } while(b===a);
+  return Array.from({length:len},(_,i)=>i%2===0?a:b);
+}
+
+function genSymAlt(len){
+  if(len%2===0) len--;
+  if(len<3) len=3;
+  let a=randInt(0,3), b;
+  do{ b=randInt(0,3); } while(b===a);
+  return Array.from({length:len},(_,i)=>i%2===0?a:b);
+}
+
+function genSymmetric(len){
+  const half=Math.ceil(len/2);
+  const left=Array.from({length:half},()=>randInt(0,3));
+  return left.concat(left.slice(0,Math.floor(len/2)).reverse());
+}
+
+function genRepeating(len){
+  const size=Math.random()<0.5?3:4;
+  if(len<size*2) len=size*2;
+  len=Math.floor(len/size)*size;
+  const motif=Array.from({length:size},()=>randInt(0,3));
+  return Array.from({length:len},(_,i)=>motif[i%size]);
+}
+
+function genDominant(len){
+  const d=randInt(0,3);
+  return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3));
+}
+
+const genChaotic = len => Array.from({length:len},()=>randInt(0,3));
+
+// ---- Equal generators (correct & final) ----
+function genEqual2(){
+  const reps=randInt(1,5); // 2–10
+  const syms=shuffle([0,1,2,3]).slice(0,2);
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+
+function genEqual3(){
+  const reps=randInt(1,3); // 3,6,9
+  const syms=shuffle([0,1,2,3]).slice(0,3);
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+
+function genEqual4(){
+  const reps=randInt(1,2); // 4 or 8
+  let out=[];
+  for(let i=0;i<reps;i++) out.push(0,1,2,3);
+  return shuffle(out);
+}
+
+function genPairs(len){
+  if(len%2!==0) len--;
+  let out=[];
+  while(out.length<len){
+    const s=randInt(0,3);
+    out.push(s,s);
+  }
+  return out;
+}
+
+function genTriples(len){
+  const reps=Math.max(1,Math.floor(len/3));
+  let out=[];
+  for(let i=0;i<reps;i++){
+    const s=randInt(0,3);
+    out.push(s,s,s);
+  }
+  return out;
+}
+
+function genBlock(len){
+  if(len<4) len=4;
+  const blocks=randInt(2,Math.min(4,Math.floor(len/2)));
+  let remaining=len;
+  let sizes=[];
+  for(let i=0;i<blocks-1;i++){
+    const size=randInt(2,remaining-2*(blocks-i-1));
+    sizes.push(size); remaining-=size;
+  }
+  sizes.push(remaining);
+  const syms=shuffle([0,1,2,3]);
+  let out=[];
+  sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i])));
+  return out;
+}
+
+// ========== Classifier ==========
+function classify(seq){
+  const len=seq.length; const tags=[]; const counts={};
+  seq.forEach(c=>counts[c]=(counts[c]||0)+1);
+  const uniqueCount=Object.keys(counts).length;
+  const maxCount=Math.max(...Object.values(counts));
+  if(uniqueCount===1){tags.push('uniform');tags.push('dominant');}else if(maxCount/len>=0.6) tags.push('dominant');
+  if(seq.join('')===seq.slice().reverse().join('')) tags.push('symmetric');
+  let alt=true; for(let i=2;i<len;i++) if(seq[i]!==seq[i-2]){alt=false;break;}
+  if(alt && len%2===0 && len>=4) tags.push('alternating');
+  if(alt && len%2===1 && len>=3){tags.push('symalt');tags.push('alternating');}
+  for(let size of [3,4]){if(len<size*2) continue;if(len%size!==0) continue; if(seq.slice(0,size).join('').repeat(len/size)===seq.join('')){tags.push('repeating');break;}}
+  const equalCounts=Object.values(counts).every(c=>c===counts[seq[0]]);
+  if(uniqueCount===2 && equalCounts) tags.push('equal2');
+  if(uniqueCount===3 && equalCounts) tags.push('equal3');
+  if(uniqueCount===4 && equalCounts) tags.push('equal4');
+  let i=0,pairCount=0,tripleCount=0;
+  while(i<len){let count=1;while(i+count<len && seq[i+count]===seq[i]) count++; if(count>=2) pairCount+=Math.floor(count/2); if(count>=3) tripleCount+=Math.floor(count/3); for(let n=4;n<=count;n++) tags.push(n+'inarow'); i+=count;}
+  if(pairCount>0) tags.push(pairCount+'pair'); if(tripleCount>0) tags.push(tripleCount+'triple');
+  const minRun=2; let runs=[]; i=0; while(i<len){let count=1; while(i+count<len && seq[i+count]===seq[i]) count++; runs.push(count); i+=count;} if(runs.every(r=>r>=minRun)&&uniqueCount>=2) tags.push('block');
+  if(!tags.some(t=>['uniform','alternating','symalt','symmetric','repeating','dominant','equal2','equal3','equal4','block','chaotic'].includes(t))) tags.push('chaotic');
+  const symbolNames=[...new Set(seq.map(c=>SYMBOLS[c].name))];
+  return {tags,symbols:symbolNames};
+}
+
+// ========== Dispatch ==========
+let currentSequence=[];
+function run(type){
+  let len=randInt(2,10); let seq;
+  switch(type){
+    case 'uniform': seq=genUniform(len); break;
+    case 'alternating': seq=genAlternating(len); break;
+    case 'symalt': seq=genSymAlt(len); break;
+    case 'symmetric': seq=genSymmetric(len); break;
+    case 'repeating': seq=genRepeating(len); break;
+    case 'dominant': seq=genDominant(len); break;
+    case 'chaotic': seq=genChaotic(len); break;
+    case 'equal2': seq=genEqual2(); break;
+    case 'equal3': seq=genEqual3(); break;
+    case 'equal4': seq=genEqual4(); break;
+    case 'pairs': seq=genPairs(len); break;
+    case 'triples': seq=genTriples(len); break;
+    case 'block': seq=genBlock(len); break;
+  }
+  currentSequence=seq;
+  const r=classify(seq);
+  document.getElementById('output').innerHTML=mapSymbols(seq);
+  document.getElementById('meta').textContent=`intent: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+}
+
+// ========== Response ==========
+function respond(type){
+  if(!currentSequence.length) return;
+  let seq=[];
+  switch(type){
+    case 'copy': seq=currentSequence.slice(); break;
+    case 'reverse': seq=currentSequence.slice().reverse(); break;
+    case 'scramble': seq=shuffle(currentSequence.slice()); break;
+  }
+  const r=classify(seq);
+  document.getElementById('response-output').innerHTML=mapSymbols(seq);
+  document.getElementById('response-meta').textContent=`response: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+}
+
+// Manual response
+document.getElementById('manual-submit').onclick = function(){
+  const input=document.getElementById('manual-input').value.trim();
+  const seq=[];
+  for(let ch of input){
+    const n=Number(ch);
+    if(n>=1 && n<=4) seq.push(n-1);
+  }
+  if(!seq.length){alert('Invalid input: use digits 1-4 only'); return;}
+  const r=classify(seq);
+  document.getElementById('manual-output').innerHTML=mapSymbols(seq);
+  document.getElementById('manual-meta').textContent=`manual input | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+}
+</script>
+</body>
+</html>
