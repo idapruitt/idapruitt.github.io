@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #74b893;
+      background: #7d74b8;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -166,156 +166,106 @@ const SYMBOLS = [
   { char:'✖', class:'xmark', name:'x' }
 ];
 
-const randInt=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=randInt(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
-const choice=a=>a[randInt(0,a.length-1)];
+const $ = id => document.getElementById(id);
+const randInt = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){ const j=randInt(0,i); [a[i],a[j]]=[a[j],a[i]];} return a; };
+const choice = a => a[randInt(0,a.length-1)];
 
 function render(seq){
   return seq.map(i=>{
-    const s=SYMBOLS[i];
+    const s = SYMBOLS[i];
     return `<div class="symbol-container"><span class="symbol ${s.class}">${s.char}</span><span class="number">${i+1}</span></div>`;
   }).join('');
 }
 
 // ================= GENERATORS =================
-const genUniform=len=>Array(len).fill(randInt(0,3));
-function genAlternating(len){ if(len%2)len--; if(len<4)len=4; let a=randInt(0,3),b;do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
-function genSymAlt(len){ if(len%2===0)len--; if(len<3)len=3; let a=randInt(0,3),b;do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
+const genUniform = len => Array(len).fill(randInt(0,3));
+function genAlternating(len){ if(len%2)len--; if(len<4)len=4; let a=randInt(0,3),b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
+function genSymAlt(len){ if(len%2===0)len--; if(len<3)len=3; let a=randInt(0,3),b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
 function genSymmetric(len){ const h=Math.ceil(len/2); const l=Array.from({length:h},()=>randInt(0,3)); return l.concat(l.slice(0,Math.floor(len/2)).reverse()); }
 function genRepeating(len){ const s=Math.random()<0.5?3:4; if(len<s*2)len=s*2; len=Math.floor(len/s)*s; const m=Array.from({length:s},()=>randInt(0,3)); return Array.from({length:len},(_,i)=>m[i%s]); }
 function genDominant(len){ const d=randInt(0,3); return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3)); }
-const genChaotic=len=>Array.from({length:len},()=>randInt(0,3));
+const genChaotic = len => Array.from({length:len},()=>randInt(0,3));
 
 // ---- Equal generators (correct & final) ----
-function genEqual2(){
-  const reps=randInt(1,5); // 2–10
-  const syms=shuffle([0,1,2,3]).slice(0,2);
-  let out=[];
-  for(let i=0;i<reps;i++) out.push(...syms);
-  return shuffle(out);
-}
-
-function genEqual3(){
-  const reps=randInt(1,3); // 3,6,9
-  const syms=shuffle([0,1,2,3]).slice(0,3);
-  let out=[];
-  for(let i=0;i<reps;i++) out.push(...syms);
-  return shuffle(out);
-}
-
-function genEqual4(){
-  const reps=randInt(1,2); // 4 or 8
-  let out=[];
-  for(let i=0;i<reps;i++) out.push(0,1,2,3);
-  return shuffle(out);
-}
-
-function genPairs(len){
-  if(len%2!==0) len--;
-  let out=[];
-  while(out.length<len){
-    const s=randInt(0,3);
-    out.push(s,s);
-  }
-  return out;
-}
-
-function genTriples(len){
-  const reps=Math.max(1,Math.floor(len/3));
-  let out=[];
-  for(let i=0;i<reps;i++){
-    const s=randInt(0,3);
-    out.push(s,s,s);
-  }
-  return out;
-}
-
-function genBlock(len){
-  if(len<4) len=4;
-  const blocks=randInt(2,Math.min(4,Math.floor(len/2)));
-  let remaining=len;
-  let sizes=[];
-  for(let i=0;i<blocks-1;i++){
-    const size=randInt(2,remaining-2*(blocks-i-1));
-    sizes.push(size); remaining-=size;
-  }
-  sizes.push(remaining);
-  const syms=shuffle([0,1,2,3]);
-  let out=[];
-  sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i])));
-  return out;
-}
+function genEqual2(){ const reps=randInt(1,5); const syms=shuffle([0,1,2,3]).slice(0,2); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out); }
+function genEqual3(){ const reps=randInt(1,3); const syms=shuffle([0,1,2,3]).slice(0,3); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out); }
+function genEqual4(){ const reps=randInt(1,2); let out=[]; for(let i=0;i<reps;i++) out.push(0,1,2,3); return shuffle(out); }
+function genPairs(len){ if(len%2!==0) len--; let out=[]; while(out.length<len){ const s=randInt(0,3); out.push(s,s); } return out; }
+function genTriples(len){ const reps=Math.max(1,Math.floor(len/3)); let out=[]; for(let i=0;i<reps;i++){ const s=randInt(0,3); out.push(s,s,s); } return out; }
+function genBlock(len){ if(len<4) len=4; const blocks=randInt(2,Math.min(4,Math.floor(len/2))); let remaining=len; let sizes=[]; for(let i=0;i<blocks-1;i++){ const size=randInt(2,remaining-2*(blocks-i-1)); sizes.push(size); remaining-=size; } sizes.push(remaining); const syms=shuffle([0,1,2,3]); let out=[]; sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i]))); return out; }
 
 // ================= CLASSIFIER =================
 function classify(seq){
-  const len=seq.length,counts={},tags=[];
+  const len=seq.length, counts={}, tags=[];
   seq.forEach(c=>counts[c]=(counts[c]||0)+1);
-  const uniq=Object.keys(counts).length,max=Math.max(...Object.values(counts));
+  const uniq=Object.keys(counts).length, max=Math.max(...Object.values(counts));
 
-  if(uniq===1){tags.push('uniform','dominant');}
+  if(uniq===1){ tags.push('uniform','dominant'); }
   else if(max/len>=0.6) tags.push('dominant');
 
   if(seq.join('')===seq.slice().reverse().join('')) tags.push('symmetric');
 
-  let alt=true; for(let i=2;i<len;i++) if(seq[i]!==seq[i-2]){alt=false;break;}
+  let alt=true; for(let i=2;i<len;i++) if(seq[i]!==seq[i-2]){ alt=false; break; }
   if(alt){ tags.push('alternating'); if(len%2) tags.push('symalt'); }
 
-  [3,4].forEach(n=>{ if(len>=n*2&&len%n===0){const m=seq.slice(0,n).join(''); if(m.repeat(len/n)===seq.join('')) tags.push('repeating'); }});
+  [3,4].forEach(n=>{ if(len>=n*2 && len%n===0){ const m=seq.slice(0,n).join(''); if(m.repeat(len/n)===seq.join('')) tags.push('repeating'); }});
 
   const eq=Object.values(counts).every(v=>v===counts[seq[0]]);
-  if(uniq===2&&eq)tags.push('equal2'); if(uniq===3&&eq)tags.push('equal3'); if(uniq===4&&eq)tags.push('equal4');
+  if(uniq===2&&eq) tags.push('equal2');
+  if(uniq===3&&eq) tags.push('equal3');
+  if(uniq===4&&eq) tags.push('equal4');
 
-  let i=0; while(i<len){let c=1; while(i+c<len&&seq[i+c]===seq[i])c++; if(c>=2)tags.push('pair'); if(c>=3)tags.push('triple'); i+=c; }
+  let i=0; while(i<len){ let c=1; while(i+c<len && seq[i+c]===seq[i]) c++; if(c>=2) tags.push('pair'); if(c>=3) tags.push('triple'); i+=c; }
 
   if(!tags.length) tags.push('chaotic');
-  return {tags, symbols:[...new Set(seq.map(i=>SYMBOLS[i].name))]};
+  return { tags:[...new Set(tags)], symbols:[...new Set(seq.map(i=>SYMBOLS[i].name))] };
 }
 
 // ================= STATE =================
 let currentSequence=null;
-let responseMode='auto';
 
 // ================= DISPATCH =================
 function run(type){
-  let len=randInt(2,10),seq;
+  let len=randInt(2,10), seq;
   switch(type){
-    case'uniform':seq=genUniform(len);break;
-    case'alternating':seq=genAlternating(len);break;
-    case'symalt':seq=genSymAlt(len);break;
-    case'symmetric':seq=genSymmetric(len);break;
-    case'repeating':seq=genRepeating(len);break;
-    case'dominant':seq=genDominant(len);break;
-    case'chaotic':seq=genChaotic(len);break;
-    case'equal2':seq=genEqual2();break;
-    case'equal3':seq=genEqual3();break;
-    case'equal4':seq=genEqual4();break;
-    case'pairs':seq=genPairs(len);break;
-    case'triples':seq=genTriples(len);break;
-    case'block':seq=genBlock(len);break;
+    case 'uniform': seq=genUniform(len); break;
+    case 'alternating': seq=genAlternating(len); break;
+    case 'symalt': seq=genSymAlt(len); break;
+    case 'symmetric': seq=genSymmetric(len); break;
+    case 'repeating': seq=genRepeating(len); break;
+    case 'dominant': seq=genDominant(len); break;
+    case 'chaotic': seq=genChaotic(len); break;
+    case 'equal2': seq=genEqual2(); break;
+    case 'equal3': seq=genEqual3(); break;
+    case 'equal4': seq=genEqual4(); break;
+    case 'pairs': seq=genPairs(len); break;
+    case 'triples': seq=genTriples(len); break;
+    case 'block': seq=genBlock(len); break;
   }
-  currentSequence=seq;
-  const r=classify(seq);
-  generator-output.innerHTML=render(seq);
-  generator-meta.textContent=`intent: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+  currentSequence = seq;
+  const r = classify(seq);
+  $('generator-output').innerHTML = render(seq);
+  $('generator-meta').textContent = `intent: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
 }
 
 function respond(type){
   if(!currentSequence) return;
   let seq;
   switch(type){
-    case'copy':seq=[...currentSequence];break;
-    case'reverse':seq=[...currentSequence].reverse();break;
-    case'scramble':seq=shuffle(currentSequence);break;
-    case'swap':seq=currentSequence.map(()=>randInt(0,3));break;
-    case'takeover':seq=Array(currentSequence.length).fill(choice(currentSequence));break;
+    case 'copy': seq=[...currentSequence]; break;
+    case 'reverse': seq=[...currentSequence].reverse(); break;
+    case 'scramble': seq=shuffle(currentSequence); break;
+    case 'swap': seq=currentSequence.map(()=>randInt(0,3)); break;
+    case 'takeover': seq=Array(currentSequence.length).fill(choice(currentSequence)); break;
   }
   renderResponse(seq,'response-output','response-meta','response-features');
 }
 
 function renderResponse(seq,outId,metaId,featId){
   const r=classify(seq);
-  document.getElementById(outId).innerHTML=render(seq);
-  document.getElementById(metaId).textContent=`perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+  $(outId).innerHTML = render(seq);
+  $(metaId).textContent = `perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
   renderFeatures(seq,featId);
 }
 
@@ -329,19 +279,19 @@ function renderFeatures(resp,containerId){
     chaotic: classify(resp).tags.includes('chaotic')
   };
   const labels={identical:'identical',fullSymbolMatch:'full symbol match',allNewSymbols:'all new symbols',patternMatch:'pattern match',chaotic:'chaotic'};
-  document.getElementById(containerId).innerHTML=Object.keys(labels).map(k=>`<div class="feature ${f[k]?'true':''}">${labels[k]}</div>`).join('');
+  $(containerId).innerHTML = Object.keys(labels).map(k=>`<div class="feature ${f[k]?'true':''}">${labels[k]}</div>`).join('');
 }
 
-function setResponseMode(m){
-  responseMode=m;
-  auto-response.classList.toggle('hidden',m!=='auto');
-  manual-response.classList.toggle('hidden',m!=='manual');
+function setResponseMode(mode){
+  $('auto-response').classList.toggle('hidden',mode!=='auto');
+  $('manual-response').classList.toggle('hidden',mode!=='manual');
 }
 
 function submitManual(){
-  const val=manual-input.value.trim();
+  const val=$('manual-input').value.trim();
+  if(!currentSequence) return;
   const seq=[...val].map(c=>Number(c)-1).filter(n=>n>=0&&n<4);
-  if(!seq.length||!currentSequence) return;
+  if(!seq.length) return;
   renderResponse(seq,'manual-output','manual-meta','manual-features');
 }
 </script>
