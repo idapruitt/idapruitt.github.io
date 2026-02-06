@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      background: #7d74b8;
+      background: #b8749c;
       color: #e6e6eb;
       padding: 24px;
     }
@@ -124,13 +124,7 @@
   <div class="output" id="generator-output"></div>
   <div class="meta" id="generator-meta"></div>
 
-  <div class="controls" style="margin-top:16px">
-    <button onclick="respond('copy')">Respond: Copy</button>
-    <button onclick="respond('reverse')">Respond: Reverse</button>
-    <button onclick="respond('scramble')">Respond: Scramble</button>
-    <button onclick="respond('swap')">Respond: Symbol Swap</button>
-    <button onclick="respond('takeover')">Respond: Takeover</button>
-  </div>
+  
 </div>
 
 <!-- ================= RESPONSE ================= -->
@@ -140,6 +134,14 @@
   <div class="controls">
     <button class="secondary" onclick="setResponseMode('auto')">Auto Response</button>
     <button class="secondary" onclick="setResponseMode('manual')">Manual Response</button>
+  </div>
+
+  <div class="controls" style="margin-bottom:12px">
+    <button onclick="respond('copy')">Copy</button>
+    <button onclick="respond('reverse')">Reverse</button>
+    <button onclick="respond('scramble')">Scramble</button>
+    <button onclick="respond('swap')">Symbol Swap</button>
+    <button onclick="respond('takeover')">Takeover</button>
   </div>
 
   <div id="auto-response">
