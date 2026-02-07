@@ -2,109 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pattern Generator Playground</title>
+  <title>Pattern Generator</title>
   <style>
-    body {
-      font-family: system-ui, sans-serif;
-      background: #b8749c;
-      color: #e6e6eb;
-      padding: 24px;
-    }
-    h1 { font-size: 1.8rem; margin-bottom: 6px; }
-    h2 { margin-top: 32px; font-size: 1.2rem; }
-    p { opacity: 0.7; margin-bottom: 16px; }
+    body{font-family:system-ui,sans-serif;background:#5ec488;color:#e6e6eb;padding:24px;}
+    h1{font-size:1.8rem;margin-bottom:6px;}
+    h2{margin-top:0;font-size:1.2rem;}
 
-    .controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 10px;
-      margin-bottom: 16px;
-    }
+    .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;}
+    button{padding:10px;border-radius:12px;border:none;background:#1f1f2e;color:#fff;cursor:pointer;font-size:0.9rem;}
+    button:hover{background:#2c2c44;}
 
-    button {
-      padding: 10px;
-      border-radius: 12px;
-      border: none;
-      background: #1f1f2e;
-      color: #fff;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    button:hover { background: #2c2c44; }
-    button.secondary { background:#2a2a38; }
+    .panel{background:#14141d;border-radius:18px;padding:16px;margin-bottom:24px;}
 
-    .panel {
-      background:#14141d;
-      border-radius: 18px;
-      padding: 16px;
-      margin-bottom: 24px;
+    .output{font-size:2rem;letter-spacing:0.4rem;min-height:72px;display:flex;flex-wrap:wrap;}
+    .symbol-container{display:flex;flex-direction:column;align-items:center;margin:0 0.2rem;}
+    .symbol{font-size:1.2rem;}
+    .number{font-size:0.9rem;opacity:0.7;}
+
+    .heart{color:#ff4d6d;}
+    .star{color:#ffd700;}
+    .triangle{color:#00ffff;}
+    .xmark{color:#ffffff;}
+
+    .pill-title{margin-top:10px;font-size:0.75rem;letter-spacing:0.08em;text-transform:uppercase;opacity:0.75;}
+    .pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center;}
+    .pill{
+      padding:6px 12px;border-radius:999px;font-size:0.82rem;border:1px solid transparent;
+      user-select:none;white-space:nowrap;
     }
 
-    .output {
-      font-size: 2rem;
-      letter-spacing: 0.4rem;
-      min-height: 72px;
-      display: flex;
-      flex-wrap: wrap;
-    }
+    /* color themes */
+    .pill.intent{background:#3a1a2a;border-color:#ff4d9a;color:#ffd1e6;}
+    .pill.gen{background:#14243a;border-color:#2f89ff;color:#cfe6ff;}
+    .pill.evalgen{background:#14243a;border-color:#2f89ff;color:#cfe6ff;}
+    .pill.match{background:#1f5f3a;border-color:#2fa36a;color:#c9ffe3;}
+    .pill.mismatch{background:#5a4a16;border-color:#e7c14a;color:#fff2c2;}
+    .pill.anti{background:#4a1414;border-color:#ff4d4d;color:#ffd1d1;}
 
-    .symbol-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 0 0.2rem;
-    }
-    .symbol { font-size: 1.2rem; }
-    .number { font-size: 0.9rem; opacity:0.7; }
-
-    .heart { color:#ff4d6d; }
-    .star { color:#ffd700; }
-    .triangle { color:#00ffff; }
-    .xmark { color:#ffffff; }
-
-    .meta {
-      margin-top: 8px;
-      opacity: 0.6;
-      font-size: 0.85rem;
-    }
-
-    .feature-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .feature {
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 0.8rem;
-      background:#2a2a38;
-      color:#aaa;
-      border:1px solid #3a3a55;
-    }
-    .feature.true {
-      background:#1f5f3a;
-      color:#c9ffe3;
-      border-color:#2fa36a;
-    }
-
-    .hidden { display:none; }
-    input[type=text] {
-      padding:8px;
-      border-radius:8px;
-      border:none;
-      width:220px;
-    }
+    input[type=text]{padding:8px;border-radius:8px;border:none;width:220px;margin-right:8px;background:#1f1f2e;color:#fff;}
   </style>
 </head>
 <body>
 
-<h1>Pattern Generator Playground</h1>
-<p>Intent (generator) vs perception (classifier). Responses are evaluated against the original.</p>
+<h1>Pattern Generator</h1>
 
 <!-- ================= PATTERN GENERATOR ================= -->
 <div class="panel">
   <h2>Pattern Generator</h2>
+
   <div class="controls">
     <button onclick="run('uniform')">Uniform</button>
     <button onclick="run('alternating')">Alternating</button>
@@ -113,50 +58,106 @@
     <button onclick="run('repeating')">Repeating</button>
     <button onclick="run('dominant')">Dominant</button>
     <button onclick="run('chaotic')">Chaotic</button>
+
     <button onclick="run('equal2')">Equal 2</button>
     <button onclick="run('equal3')">Equal 3</button>
     <button onclick="run('equal4')">Equal 4</button>
+
     <button onclick="run('pairs')">Pairs</button>
     <button onclick="run('triples')">Triples</button>
     <button onclick="run('block')">Block</button>
+
+    <button onclick="run('doubles')">Doubles</button>
+    <button onclick="run('thirds')">Thirds</button>
+    <button onclick="run('twosides')">Two Sides</button>
+    <button onclick="run('partialalt')">Partial Alternating</button>
+
+    <button onclick="run('sandwich')">Sandwich</button>
+    <button onclick="run('crustedsandwich')">Crusted Sandwich</button>
+
+    <button onclick="run('doublesandwich')">Double Sandwich</button>
+    <button onclick="run('crusteddoublesandwich')">Crusted Double Sandwich</button>
+
+    <button onclick="run('reversesandwich')">Reverse Sandwich</button>
+    <button onclick="run('reversedoublesandwich')">Reverse Double Sandwich</button>
   </div>
 
   <div class="output" id="generator-output"></div>
-  <div class="meta" id="generator-meta"></div>
 
-  
+  <div class="pill-title">Intent</div>
+  <div class="pill-row" id="generator-intent-row"></div>
+
+  <div class="pill-title">Perception</div>
+  <div class="pill-row" id="generator-perception-row"></div>
+
+  <div class="pill-title">Evaluation</div>
+  <div class="pill-row" id="generator-eval-row"></div>
 </div>
 
-<!-- ================= RESPONSE ================= -->
+<!-- ================= RESPONSE (BUTTONS) ================= -->
 <div class="panel">
-  <h2>Response</h2>
+  <h2>Response — Buttons</h2>
 
   <div class="controls">
-    <button class="secondary" onclick="setResponseMode('auto')">Auto Response</button>
-    <button class="secondary" onclick="setResponseMode('manual')">Manual Response</button>
-  </div>
-
-  <div class="controls" style="margin-bottom:12px">
     <button onclick="respond('copy')">Copy</button>
     <button onclick="respond('reverse')">Reverse</button>
     <button onclick="respond('scramble')">Scramble</button>
     <button onclick="respond('swap')">Symbol Swap</button>
     <button onclick="respond('takeover')">Takeover</button>
+    <button onclick="respond('newfilling')">New Filling</button>
+    <button onclick="respond('randomfilling')">Random Filling</button>
+    <button onclick="respond('newends')">New Ends</button>
+    <button onclick="respond('chaotic_resp')">Chaotic</button>
+    <button onclick="respond('rotation')">Rotation</button>
+    <button onclick="respond('partialcopy')">Partial Copy</button>
   </div>
 
-  <div id="auto-response">
-    <div class="output" id="response-output"></div>
-    <div class="meta" id="response-meta"></div>
-    <div class="feature-grid" id="response-features"></div>
-  </div>
+  <div class="output" id="response-output"></div>
 
-  <div id="manual-response" class="hidden">
+  <div class="pill-title">Response Intent</div>
+  <div class="pill-row" id="response-intent-row"></div>
+
+  <div class="pill-title">Response Perception</div>
+  <div class="pill-row" id="response-responseperception-row"></div>
+
+  <div class="pill-title">Perception</div>
+  <div class="pill-row" id="response-perception-row"></div>
+
+  <div class="pill-title">Anti-tags</div>
+  <div class="pill-row" id="response-antitags-row"></div>
+
+  <div class="pill-title">Evaluation</div>
+  <div class="pill-row" id="response-eval-row"></div>
+
+  <div class="pill-title">Evaluation Anti-tags</div>
+  <div class="pill-row" id="response-eval-antitags-row"></div>
+</div>
+
+<!-- ================= RESPONSE (MANUAL) ================= -->
+<div class="panel">
+  <h2>Response — Manual Input</h2>
+
+  <div style="margin-bottom: 10px;">
     <input id="manual-input" type="text" placeholder="Enter digits 1–4" />
     <button onclick="submitManual()">Submit</button>
-    <div class="output" id="manual-output"></div>
-    <div class="meta" id="manual-meta"></div>
-    <div class="feature-grid" id="manual-features"></div>
   </div>
+
+  <div class="output" id="manual-output"></div>
+
+  <div class="pill-title">Response Perception</div>
+  <div class="pill-row" id="manual-responseperception-row"></div>
+
+  <div class="pill-title">Perception</div>
+  <div class="pill-row" id="manual-perception-row"></div>
+
+  <div class="pill-title">Anti-tags</div>
+  <div class="pill-row" id="manual-antitags-row"></div>
+
+  <div class="pill-title">Evaluation</div>
+  <div class="pill-row" id="manual-eval-row"></div>
+
+  <div class="pill-title">Evaluation Anti-tags</div>
+  <div class="pill-row" id="manual-eval-antitags-row"></div>
 </div>
 
 <script>
@@ -172,60 +173,496 @@ const $ = id => document.getElementById(id);
 const randInt = (a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){ const j=randInt(0,i); [a[i],a[j]]=[a[j],a[i]];} return a; };
 const choice = a => a[randInt(0,a.length-1)];
+const choiceFrom = a => a[Math.floor(Math.random()*a.length)];
 
+const LABELS = {
+  uniform:'Uniform', alternating:'Alternating', symalt:'Symmetric Alt', symmetric:'Symmetric', repeating:'Repeating',
+  dominant:'Dominant', chaotic:'Chaotic',
+  equal2:'Equal 2', equal3:'Equal 3', equal4:'Equal 4',
+  pairs:'Pairs', triples:'Triples', block:'Block',
+  doubles:'Doubles', thirds:'Thirds', twosides:'Two Sides', partialalt:'Partial Alternating',
+  sandwich:'Sandwich', crustedsandwich:'Crusted Sandwich',
+  doublesandwich:'Double Sandwich', crusteddoublesandwich:'Crusted Double Sandwich',
+  reversesandwich:'Reverse Sandwich', reversedoublesandwich:'Reverse Double Sandwich',
+  copy:'Copy', reverse:'Reverse', scramble:'Scramble', swap:'Symbol Swap', takeover:'Takeover', newfilling:'New Filling', randomfilling:'Random Filling', newends:'New Ends', chaotic_resp:'Chaotic', rotation:'Rotation', partialcopy:'Partial Copy'
+};
+const labelFor = t => LABELS[t] || t;
+
+// ---------- Pill renderers (only active) ----------
+function renderTagRow(containerId, tags, className, labelFn=labelFor){
+  const el = $(containerId);
+  if(!el) return;
+  const arr = [...tags];
+  if(!arr.length){
+    el.innerHTML = '<span style="opacity:0.45;font-size:0.85rem">—</span>';
+    return;
+  }
+  el.innerHTML = arr.map(t => `<span class="pill ${className}">${labelFn(t)}</span>`).join('');
+}
+
+function renderMatchRow(containerId, tags, refTags, labelFn=labelFor){
+  const el = $(containerId);
+  if(!el) return;
+  const arr = [...tags];
+  if(!arr.length){
+    el.innerHTML = '<span style="opacity:0.45;font-size:0.85rem">—</span>';
+    return;
+  }
+  const refSet = new Set(refTags);
+  el.innerHTML = arr.map(t => {
+    const cls = refSet.has(t) ? 'match' : 'mismatch';
+    return `<span class="pill ${cls}">${labelFn(t)}</span>`;
+  }).join('');
+}
+
+function renderAntiRow(containerId, refTags, tags, labelFn=labelFor){
+  const el = $(containerId);
+  if(!el) return;
+  const refSet = new Set(refTags);
+  const tagSet = new Set(tags);
+  const anti = [...refSet].filter(t => !tagSet.has(t));
+  if(!anti.length){
+    el.innerHTML = '<span style="opacity:0.45;font-size:0.85rem">—</span>';
+    return;
+  }
+  el.innerHTML = anti.map(t => `<span class="pill anti">${labelFn(t)}</span>`).join('');
+}
+
+// ================= RENDERING =================
 function render(seq){
   return seq.map(i=>{
     const s = SYMBOLS[i];
-    return `<div class="symbol-container"><span class="symbol ${s.class}">${s.char}</span><span class="number">${i+1}</span></div>`;
+    return `<div class="symbol-container">
+      <span class="symbol ${s.class}">${s.char}</span>
+      <span class="number">${i+1}</span>
+    </div>`;
   }).join('');
 }
 
 // ================= GENERATORS =================
 const genUniform = len => Array(len).fill(randInt(0,3));
-function genAlternating(len){ if(len%2)len--; if(len<4)len=4; let a=randInt(0,3),b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
-function genSymAlt(len){ if(len%2===0)len--; if(len<3)len=3; let a=randInt(0,3),b; do{b=randInt(0,3);}while(b===a); return Array.from({length:len},(_,i)=>i%2?a:b); }
-function genSymmetric(len){ const h=Math.ceil(len/2); const l=Array.from({length:h},()=>randInt(0,3)); return l.concat(l.slice(0,Math.floor(len/2)).reverse()); }
-function genRepeating(len){ const s=Math.random()<0.5?3:4; if(len<s*2)len=s*2; len=Math.floor(len/s)*s; const m=Array.from({length:s},()=>randInt(0,3)); return Array.from({length:len},(_,i)=>m[i%s]); }
-function genDominant(len){ const d=randInt(0,3); return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3)); }
+
+function genAlternating(len){
+  if(len%2) len--;
+  if(len<4) len=4;
+  let a=randInt(0,3), b; do{ b=randInt(0,3); }while(b===a);
+  return Array.from({length:len},(_,i)=>i%2 ? b : a);
+}
+function genSymAlt(len){
+  if(len%2===0) len--;
+  if(len<3) len=3;
+  let a=randInt(0,3), b; do{ b=randInt(0,3); }while(b===a);
+  return Array.from({length:len},(_,i)=>i%2 ? b : a);
+}
+function genSymmetric(len){
+  const h=Math.ceil(len/2);
+  const l=Array.from({length:h},()=>randInt(0,3));
+  return l.concat(l.slice(0,Math.floor(len/2)).reverse());
+}
+function genRepeating(len){
+  const s=Math.random()<0.5?3:4;
+  if(len<s*2) len=s*2;
+  len=Math.floor(len/s)*s;
+  const m=Array.from({length:s},()=>randInt(0,3));
+  return Array.from({length:len},(_,i)=>m[i%s]);
+}
+function genDominant(len){
+  const d=randInt(0,3);
+  return Array.from({length:len},()=>Math.random()<0.65?d:randInt(0,3));
+}
 const genChaotic = len => Array.from({length:len},()=>randInt(0,3));
 
-// ---- Equal generators (correct & final) ----
-function genEqual2(){ const reps=randInt(1,5); const syms=shuffle([0,1,2,3]).slice(0,2); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out); }
-function genEqual3(){ const reps=randInt(1,3); const syms=shuffle([0,1,2,3]).slice(0,3); let out=[]; for(let i=0;i<reps;i++) out.push(...syms); return shuffle(out); }
-function genEqual4(){ const reps=randInt(1,2); let out=[]; for(let i=0;i<reps;i++) out.push(0,1,2,3); return shuffle(out); }
-function genPairs(len){ if(len%2!==0) len--; let out=[]; while(out.length<len){ const s=randInt(0,3); out.push(s,s); } return out; }
-function genTriples(len){ const reps=Math.max(1,Math.floor(len/3)); let out=[]; for(let i=0;i<reps;i++){ const s=randInt(0,3); out.push(s,s,s); } return out; }
-function genBlock(len){ if(len<4) len=4; const blocks=randInt(2,Math.min(4,Math.floor(len/2))); let remaining=len; let sizes=[]; for(let i=0;i<blocks-1;i++){ const size=randInt(2,remaining-2*(blocks-i-1)); sizes.push(size); remaining-=size; } sizes.push(remaining); const syms=shuffle([0,1,2,3]); let out=[]; sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i]))); return out; }
+// Equal generators
+function genEqual2(){
+  const reps=randInt(1,5);
+  const syms=shuffle([0,1,2,3]).slice(0,2);
+  let out=[]; for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+function genEqual3(){
+  const reps=randInt(1,3);
+  const syms=shuffle([0,1,2,3]).slice(0,3);
+  let out=[]; for(let i=0;i<reps;i++) out.push(...syms);
+  return shuffle(out);
+}
+function genEqual4(){
+  const reps=randInt(1,2);
+  let out=[]; for(let i=0;i<reps;i++) out.push(0,1,2,3);
+  return shuffle(out);
+}
 
-// ================= CLASSIFIER =================
+function genPairs(len){
+  if(len%2!==0) len--;
+  let out=[];
+  while(out.length<len){ const s=randInt(0,3); out.push(s,s); }
+  return out;
+}
+function genTriples(len){
+  const reps=Math.max(1,Math.floor(len/3));
+  let out=[];
+  for(let i=0;i<reps;i++){ const s=randInt(0,3); out.push(s,s,s); }
+  return out;
+}
+function genBlock(len){
+  if(len<4) len=4;
+  const blocks=randInt(2,Math.min(4,Math.floor(len/2)));
+  let remaining=len, sizes=[];
+  for(let i=0;i<blocks-1;i++){
+    const size=randInt(2,remaining-2*(blocks-i-1));
+    sizes.push(size); remaining-=size;
+  }
+  sizes.push(remaining);
+  const syms=shuffle([0,1,2,3]);
+  let out=[];
+  sizes.forEach((s,i)=>out.push(...Array(s).fill(syms[i])));
+  return out;
+}
+
+// New generators
+function genDoubles(){
+  const segLen=randInt(2,5);
+  let a=randInt(0,3), b; do{ b=randInt(0,3);}while(b===a);
+  return Array(segLen).fill(a).concat(Array(segLen).fill(b));
+}
+function genThirds(){
+  const segLen=choiceFrom([2,3]);
+  const syms=shuffle([0,1,2,3]).slice(0,3);
+  return Array(segLen).fill(syms[0]).concat(Array(segLen).fill(syms[1])).concat(Array(segLen).fill(syms[2]));
+}
+function genTwoSides(){
+  const total=randInt(4,10);
+  const leftLen=randInt(1,total-1), rightLen=total-leftLen;
+  let a=randInt(0,3), b; do{ b=randInt(0,3);}while(b===a);
+  return Array(leftLen).fill(a).concat(Array(rightLen).fill(b));
+}
+function genPartialAlternating(){
+  const coreLen=choiceFrom([4,6,8]);
+  const maxExtra=Math.max(0,10-coreLen);
+  const preLen=randInt(0,Math.min(2,maxExtra));
+  const postLen=randInt(0,Math.min(2,maxExtra-preLen));
+  const pre=Array.from({length:preLen},()=>randInt(0,3));
+  const core=genAlternating(coreLen);
+  const post=Array.from({length:postLen},()=>randInt(0,3));
+  return pre.concat(core).concat(post);
+}
+function genSandwich(){
+  const len=randInt(3,10);
+  const edge=randInt(0,3);
+  const inside=Array.from({length:len-2},()=>randInt(0,3));
+  return [edge, ...inside, edge];
+}
+function genCrustedSandwich(){
+  const len=randInt(3,10);
+  const edge=randInt(0,3);
+  const choices=[0,1,2,3].filter(s=>s!==edge);
+  const inside=Array.from({length:len-2},()=>choice(choices));
+  return [edge, ...inside, edge];
+}
+function genDoubleSandwich(){
+  const len=randInt(5,10);
+  const edge=randInt(0,3);
+  const inside=Array.from({length:len-4},()=>randInt(0,3));
+  return [edge, edge, ...inside, edge, edge];
+}
+function genCrustedDoubleSandwich(){
+  const len=randInt(5,10);
+  const edge=randInt(0,3);
+  const choices=[0,1,2,3].filter(s=>s!==edge);
+  const inside=Array.from({length:len-4},()=>choice(choices));
+  return [edge, edge, ...inside, edge, edge];
+}
+function genReverseSandwich(){
+  const centerLen=randInt(2,8);
+  let left=randInt(0,3), right; do{ right=randInt(0,3);}while(right===left);
+  let mid; do{ mid=randInt(0,3);}while(mid===left || mid===right);
+  return [left, ...Array(centerLen).fill(mid), right];
+}
+function genReverseDoubleSandwich(){
+  const centerLen=randInt(2,6);
+  let left=randInt(0,3), right; do{ right=randInt(0,3);}while(right===left);
+  let mid; do{ mid=randInt(0,3);}while(mid===left || mid===right);
+  return [left, left, ...Array(centerLen).fill(mid), right, right];
+}
+
+// ================= CLASSIFIER (with overrides) =================
 function classify(seq){
-  const len=seq.length, counts={}, tags=[];
+  const len=seq.length;
+  const counts={}, tags=[];
   seq.forEach(c=>counts[c]=(counts[c]||0)+1);
-  const uniq=Object.keys(counts).length, max=Math.max(...Object.values(counts));
+  const uniq=Object.keys(counts).length;
 
-  if(uniq===1){ tags.push('uniform','dominant'); }
-  else if(max/len>=0.6) tags.push('dominant');
+  // Uniform overrides all others
+  if(uniq===1) return ['uniform'];
+
+  const max=Math.max(...Object.values(counts));
+  if(max/len>=0.6) tags.push('dominant');
 
   if(seq.join('')===seq.slice().reverse().join('')) tags.push('symmetric');
 
   let alt=true; for(let i=2;i<len;i++) if(seq[i]!==seq[i-2]){ alt=false; break; }
-  if(alt){ tags.push('alternating'); if(len%2) tags.push('symalt'); }
+  if(alt){
+    tags.push('alternating');
+    if(len%2) tags.push('symalt');
+  }
 
-  [3,4].forEach(n=>{ if(len>=n*2 && len%n===0){ const m=seq.slice(0,n).join(''); if(m.repeat(len/n)===seq.join('')) tags.push('repeating'); }});
+  [3,4].forEach(n=>{
+    if(len>=n*2 && len%n===0){
+      const m=seq.slice(0,n).join('');
+      if(m.repeat(len/n)===seq.join('')) tags.push('repeating');
+    }
+  });
 
   const eq=Object.values(counts).every(v=>v===counts[seq[0]]);
-  if(uniq===2&&eq) tags.push('equal2');
-  if(uniq===3&&eq) tags.push('equal3');
-  if(uniq===4&&eq) tags.push('equal4');
+  if(uniq===2 && eq) tags.push('equal2');
+  if(uniq===3 && eq) tags.push('equal3');
+  if(uniq===4 && eq) tags.push('equal4');
 
-  let i=0; while(i<len){ let c=1; while(i+c<len && seq[i+c]===seq[i]) c++; if(c>=2) tags.push('pair'); if(c>=3) tags.push('triple'); i+=c; }
+  // Pair/triple segments: only exact runs count (★★★★ is not two pairs)
+  let i=0, pairSeg=0, tripleSeg=0;
+  const runs=[];
+  while(i<len){
+    let c=1; while(i+c<len && seq[i+c]===seq[i]) c++;
+    runs.push({sym:seq[i], len:c});
+    if(c===2) pairSeg++;
+    if(c===3) tripleSeg++;
+    i+=c;
+  }
+  if(pairSeg>=1) tags.push('pairs');
+  if(tripleSeg>=1) tags.push('triples');
+
+  if(runs.length===2 && runs[0].sym!==runs[1].sym){
+    tags.push('twosides');
+    if(runs[0].len===runs[1].len) tags.push('doubles');
+  }
+  if(runs.length===3){
+    const allDistinct = (runs[0].sym!==runs[1].sym) && (runs[0].sym!==runs[2].sym) && (runs[1].sym!==runs[2].sym);
+    const sameLen = runs[0].len===runs[1].len && runs[1].len===runs[2].len;
+    if(allDistinct && sameLen) tags.push('thirds');
+  }
+
+  if(len>=3 && seq[0]===seq[len-1]) tags.push('sandwich');
+  if(len>=3 && seq[0]===seq[len-1]){
+    const edge=seq[0];
+    if(seq.slice(1,len-1).every(x=>x!==edge)) tags.push('crustedsandwich');
+  }
+  if(len>=5 && seq[0]===seq[1] && seq[len-1]===seq[len-2] && seq[0]===seq[len-1]) tags.push('doublesandwich');
+  if(len>=5 && seq[0]===seq[1] && seq[len-1]===seq[len-2] && seq[0]===seq[len-1]){
+    const edge=seq[0];
+    if(seq.slice(2,len-2).every(x=>x!==edge)) tags.push('crusteddoublesandwich');
+  }
+
+  if(len>=4 && seq[0]!==seq[len-1]){
+    const midLen=len-2;
+    if(midLen>=2){
+      const mid=seq[1];
+      const midUniform=seq.slice(1,len-1).every(x=>x===mid);
+      if(midUniform && mid!==seq[0] && mid!==seq[len-1]) tags.push('reversesandwich');
+    }
+  }
+  if(len>=6 && seq[0]===seq[1] && seq[len-1]===seq[len-2] && seq[0]!==seq[len-1]){
+    const midLen=len-4;
+    if(midLen>=2){
+      const mid=seq[2];
+      const midUniform=seq.slice(2,len-2).every(x=>x===mid);
+      if(midUniform && mid!==seq[0] && mid!==seq[len-1]) tags.push('reversedoublesandwich');
+    }
+  }
+
+  // Alternating / SymAlt override PartialAlt
+  const alreadyAlt = tags.includes('alternating') || tags.includes('symalt');
+  if(!alreadyAlt){
+    const targetLens=new Set([4,6,8]);
+    function isAltSegment(start, segLen){
+      if(segLen<4) return false;
+      for(let k=start+2;k<start+segLen;k++) if(seq[k]!==seq[k-2]) return false;
+      const seg=seq.slice(start,start+segLen);
+      return new Set(seg).size>=2;
+    }
+    let found=false;
+    for(let start=0; start<len && !found; start++){
+      for(const segLen of [8,6,4]){
+        if(start+segLen<=len && targetLens.has(segLen) && isAltSegment(start,segLen)){
+          if(!(start===0 && segLen===len)) found=true;
+        }
+      }
+    }
+    if(found) tags.push('partialalt');
+  }
 
   if(!tags.length) tags.push('chaotic');
-  return { tags:[...new Set(tags)], symbols:[...new Set(seq.map(i=>SYMBOLS[i].name))] };
+  return [...new Set(tags)];
+}
+
+// ================= EVAL (trigger-only) =================
+const EVAL_KEYS = [
+  'heart_used','star_used','triangle_used','x_used',
+  'length_1','length_2','length_3','length_4','length_5','length_6','length_7','length_8','length_9','length_10',
+  'pair_used','triple_used','multiple_pairs','multiple_triples'
+];
+const EVAL_LABELS = {
+  heart_used:'heart used', star_used:'star used', triangle_used:'triangle used', x_used:'x used',
+  length_1:'length 1', length_2:'length 2', length_3:'length 3', length_4:'length 4', length_5:'length 5',
+  length_6:'length 6', length_7:'length 7', length_8:'length 8', length_9:'length 9', length_10:'length 10',
+  pair_used:'pair used', triple_used:'triple used', multiple_pairs:'multiple pairs', multiple_triples:'multiple triples'
+};
+const evalLabelFor = k => EVAL_LABELS[k] || k;
+
+function evalKeysTrue(seq){
+  if(!seq || !seq.length) return [];
+  const set = new Set(seq);
+  const len = seq.length;
+
+  // Exact-run pairs/triples
+  let pairsCount=0, triplesCount=0;
+  let i=0;
+  while(i<len){
+    let run=1;
+    while(i+run<len && seq[i+run]===seq[i]) run++;
+    if(run===2) pairsCount++;
+    if(run===3) triplesCount++;
+    i+=run;
+  }
+
+  const st = {};
+  st.heart_used = set.has(0);
+  st.star_used = set.has(1);
+  st.triangle_used = set.has(2);
+  st.x_used = set.has(3);
+  for(let n=1;n<=10;n++) st['length_'+n] = (len===n);
+  st.pair_used = pairsCount>=1;
+  st.triple_used = triplesCount>=1;
+  st.multiple_pairs = pairsCount>=2;
+  st.multiple_triples = triplesCount>=2;
+
+  return EVAL_KEYS.filter(k => !!st[k]);
+}
+
+// ================= SMART RESPONSE PERCEPTION =================
+function arraysEqual(a,b){
+  if(a.length!==b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
+  return true;
+}
+function multisetEqual(a,b){
+  if(a.length!==b.length) return false;
+  const ca=[0,0,0,0], cb=[0,0,0,0];
+  for(const x of a) ca[x]++; for(const x of b) cb[x]++;
+  return ca[0]===cb[0] && ca[1]===cb[1] && ca[2]===cb[2] && ca[3]===cb[3];
+}
+function isAllSame(a){
+  if(!a.length) return false;
+  const v=a[0];
+  for(let i=1;i<a.length;i++) if(a[i]!==v) return false;
+  return true;
+}
+function inferResponsePerception(original, resp){
+  if(!original || !resp) return null;
+  const n0 = original.length;
+  const n1 = resp.length;
+  if(n1===0) return null;
+
+  // If lengths differ, we can still do a lightweight inference:
+  // partial copy = at least two positions match (up to min length), otherwise chaotic.
+  if(n0 !== n1){
+    const mlen = Math.min(n0, n1);
+    let matches=0;
+    for(let i=0;i<mlen;i++) if(resp[i]===original[i]) matches++;
+    if(matches>=2) return 'partialcopy';
+    return 'chaotic_resp';
+  }
+
+  const n = n0;
+
+  // Exact copy
+  if(arraysEqual(resp, original)) return 'copy';
+
+  // Exact reverse
+  const rev = [...original].reverse();
+  if(arraysEqual(resp, rev)) return 'reverse';
+
+  // Rotation (cyclic shift by k where 1 <= k <= n-1)
+  for(let k=1;k<=n-1;k++){
+    const rot = original.slice(k).concat(original.slice(0,k));
+    if(arraysEqual(resp, rot)) return 'rotation';
+  }
+
+  // Takeover (all same symbol)
+  if(isAllSame(resp)) return 'takeover';
+
+  // Symbol Swap (structure preserved under a permutation mapping)
+  let map = new Map(); // origSym -> respSym
+  let consistent = true;
+  for(let i=0;i<n;i++){
+    const o = original[i], r = resp[i];
+    if(map.has(o) && map.get(o)!==r){ consistent=false; break; }
+    map.set(o,r);
+  }
+  if(consistent){
+    const vals = [...map.values()];
+    const bij = (new Set(vals)).size === vals.length;
+    let changed = false;
+    for(const [o,r] of map.entries()){ if(o!==r) { changed=true; break; } }
+    if(bij && changed) return 'swap';
+  }
+
+  // Scramble (same multiset, different order)
+  if(multisetEqual(resp, original)) return 'scramble';
+
+  // New Ends: ends different from original ends, interior copied exactly
+  if(n>=2){
+    const endsChanged = (resp[0]!==original[0]) && (resp[n-1]!==original[n-1]);
+    const interiorCopied = arraysEqual(resp.slice(1,n-1), original.slice(1,n-1));
+    if(endsChanged && interiorCopied) return 'newends';
+  }
+
+  // New/Random filling: ends preserved, interior changed
+  if(n>=2 && resp[0]===original[0] && resp[n-1]===original[n-1]){
+    const interiorSame = arraysEqual(resp.slice(1,n-1), original.slice(1,n-1));
+    if(!interiorSame){
+      const interior = resp.slice(1,n-1);
+      const uniq = new Set(interior).size;
+      let transitions=0;
+      for(let i=1;i<interior.length;i++) if(interior[i]!==interior[i-1]) transitions++;
+      const noisy = transitions >= Math.max(2, Math.floor(interior.length/2));
+      if(uniq>=3 || noisy) return 'randomfilling';
+      return 'newfilling';
+    }
+  }
+
+  // Partial copy: at least two positions match, but not all
+  let matches=0;
+  for(let i=0;i<n;i++) if(resp[i]===original[i]) matches++;
+  if(matches>=2 && matches<n) return 'partialcopy';
+
+  // Chaotic response fallback
+  return 'chaotic_resp';
+}
+
+// Symbol swap mapping to preserve structure while changing symbols
+function makeSymbolSwapMapping(seq){
+  const used = new Set(seq);
+  const base = [0,1,2,3];
+  for(let tries=0; tries<200; tries++){
+    const perm = shuffle(base);
+    let ok = true;
+    for(const s of used){
+      if(perm[s] === s){ ok = false; break; }
+    }
+    if(ok) return perm;
+  }
+  return [1,2,3,0];
 }
 
 // ================= STATE =================
 let currentSequence=null;
+let currentGenPerception=[];
+let currentGenEvalKeys=[];
+
+// ================= UI HELPERS =================
+function renderResponsePerception(containerId, key){
+  if(!key) return renderTagRow(containerId, [], 'gen', labelFor);
+  renderTagRow(containerId, [key], 'gen', labelFor);
+}
 
 // ================= DISPATCH =================
 function run(type){
@@ -238,64 +675,216 @@ function run(type){
     case 'repeating': seq=genRepeating(len); break;
     case 'dominant': seq=genDominant(len); break;
     case 'chaotic': seq=genChaotic(len); break;
+
     case 'equal2': seq=genEqual2(); break;
     case 'equal3': seq=genEqual3(); break;
     case 'equal4': seq=genEqual4(); break;
+
     case 'pairs': seq=genPairs(len); break;
     case 'triples': seq=genTriples(len); break;
     case 'block': seq=genBlock(len); break;
+
+    case 'doubles': seq=genDoubles(); break;
+    case 'thirds': seq=genThirds(); break;
+    case 'twosides': seq=genTwoSides(); break;
+    case 'partialalt': seq=genPartialAlternating(); break;
+
+    case 'sandwich': seq=genSandwich(); break;
+    case 'crustedsandwich': seq=genCrustedSandwich(); break;
+
+    case 'doublesandwich': seq=genDoubleSandwich(); break;
+    case 'crusteddoublesandwich': seq=genCrustedDoubleSandwich(); break;
+
+    case 'reversesandwich': seq=genReverseSandwich(); break;
+    case 'reversedoublesandwich': seq=genReverseDoubleSandwich(); break;
+
+    default: seq=genChaotic(len); break;
   }
-  currentSequence = seq;
-  const r = classify(seq);
+
+  currentSequence=seq;
+  currentGenPerception = classify(seq);
+  currentGenEvalKeys = evalKeysTrue(seq);
+
   $('generator-output').innerHTML = render(seq);
-  $('generator-meta').textContent = `intent: ${type} | perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
+  renderTagRow('generator-intent-row', [type], 'intent', labelFor);
+  renderTagRow('generator-perception-row', currentGenPerception, 'gen', labelFor);
+  renderTagRow('generator-eval-row', currentGenEvalKeys, 'evalgen', evalLabelFor);
+
+  // reset responses
+  $('response-output').innerHTML='';
+  $('manual-output').innerHTML='';
+  $('manual-input').value='';
+
+  renderTagRow('response-intent-row', [], 'intent', labelFor);
+  renderResponsePerception('response-responseperception-row', null);
+  renderResponsePerception('manual-responseperception-row', null);
+
+  renderMatchRow('response-perception-row', [], currentGenPerception, labelFor);
+  renderAntiRow('response-antitags-row', currentGenPerception, [], labelFor);
+  renderMatchRow('response-eval-row', [], currentGenEvalKeys, evalLabelFor);
+  renderAntiRow('response-eval-antitags-row', currentGenEvalKeys, [], evalLabelFor);
+
+  renderMatchRow('manual-perception-row', [], currentGenPerception, labelFor);
+  renderAntiRow('manual-antitags-row', currentGenPerception, [], labelFor);
+  renderMatchRow('manual-eval-row', [], currentGenEvalKeys, evalLabelFor);
+  renderAntiRow('manual-eval-antitags-row', currentGenEvalKeys, [], evalLabelFor);
 }
 
 function respond(type){
   if(!currentSequence) return;
+
   let seq;
+  const n = currentSequence.length;
+
   switch(type){
-    case 'copy': seq=[...currentSequence]; break;
-    case 'reverse': seq=[...currentSequence].reverse(); break;
-    case 'scramble': seq=shuffle(currentSequence); break;
-    case 'swap': seq=currentSequence.map(()=>randInt(0,3)); break;
-    case 'takeover': seq=Array(currentSequence.length).fill(choice(currentSequence)); break;
+    case 'copy':
+      seq=[...currentSequence];
+      break;
+
+    case 'reverse':
+      seq=[...currentSequence].reverse();
+      break;
+
+    case 'rotation': {
+      if(n<=1){ seq=[...currentSequence]; break; }
+      const k = randInt(1, n-1);
+      seq = currentSequence.slice(k).concat(currentSequence.slice(0,k));
+      break;
+    }
+
+    case 'scramble':
+      seq=shuffle(currentSequence);
+      break;
+
+    case 'swap': {
+      const perm = makeSymbolSwapMapping(currentSequence);
+      seq = currentSequence.map(s => perm[s]);
+      break;
+    }
+
+    case 'takeover':
+      seq=Array(n).fill(choice(currentSequence));
+      break;
+
+    case 'newfilling': {
+      if(n<=2){ seq=[...currentSequence]; break; }
+      const left = currentSequence[0];
+      const right = currentSequence[n-1];
+      const interior = currentSequence.slice(1,n-1);
+      let outInterior = interior.map((v)=> {
+        const opts=[0,1,2,3].filter(x=>x!==v);
+        return choice(opts);
+      });
+      if(arraysEqual(outInterior, interior)){
+        const idx = randInt(0, outInterior.length-1);
+        const opts=[0,1,2,3].filter(x=>x!==outInterior[idx]);
+        outInterior[idx]=choice(opts);
+      }
+      seq = [left, ...outInterior, right];
+      break;
+    }
+
+    case 'randomfilling': {
+      if(n<=2){ seq=[...currentSequence]; break; }
+      const left = currentSequence[0];
+      const right = currentSequence[n-1];
+      const outInterior = Array.from({length:n-2},()=>randInt(0,3));
+      seq = [left, ...outInterior, right];
+      break;
+    }
+
+    case 'newends': {
+      if(n<=2){ seq=[...currentSequence]; break; }
+      const interior = currentSequence.slice(1,n-1);
+      const optsLeft=[0,1,2,3].filter(x=>x!==currentSequence[0]);
+      const optsRight=[0,1,2,3].filter(x=>x!==currentSequence[n-1]);
+      const left = choice(optsLeft);
+      const right = choice(optsRight);
+      seq = [left, ...interior, right];
+      break;
+    }
+
+    case 'chaotic_resp':
+      seq = Array.from({length:n},()=>randInt(0,3));
+      break;
+
+    case 'partialcopy': {
+      if(n<=2){ seq=[...currentSequence]; break; }
+      const keepCount = Math.min(n-1, randInt(2, Math.max(2, n-2)));
+      const idxs = shuffle([...Array(n).keys()]);
+      const keep = new Set(idxs.slice(0, keepCount));
+      seq = currentSequence.map((v,i)=>{
+        if(keep.has(i)) return v;
+        const opts=[0,1,2,3].filter(x=>x!==v);
+        return choice(opts);
+      });
+      if(arraysEqual(seq, currentSequence)){
+        const i = idxs[keepCount] ?? idxs[0];
+        const opts=[0,1,2,3].filter(x=>x!==seq[i]);
+        seq[i]=choice(opts);
+      }
+      break;
+    }
+
+    default:
+      seq=[...currentSequence];
+      break;
   }
-  renderResponse(seq,'response-output','response-meta','response-features');
-}
 
-function renderResponse(seq,outId,metaId,featId){
-  const r=classify(seq);
-  $(outId).innerHTML = render(seq);
-  $(metaId).textContent = `perceived: ${r.tags.join(', ')} | symbols: ${r.symbols.join(', ')} | length: ${seq.length}`;
-  renderFeatures(seq,featId);
-}
+  $('response-output').innerHTML = render(seq);
 
-function renderFeatures(resp,containerId){
-  const orig=currentSequence||[];
-  const f={
-    identical: JSON.stringify(orig)===JSON.stringify(resp),
-    fullSymbolMatch: new Set(orig).size===new Set(resp).size && [...new Set(orig)].every(s=>resp.includes(s)),
-    allNewSymbols: resp.every(s=>!orig.includes(s)),
-    patternMatch: classify(orig).tags.some(t=>classify(resp).tags.includes(t)),
-    chaotic: classify(resp).tags.includes('chaotic')
-  };
-  const labels={identical:'identical',fullSymbolMatch:'full symbol match',allNewSymbols:'all new symbols',patternMatch:'pattern match',chaotic:'chaotic'};
-  $(containerId).innerHTML = Object.keys(labels).map(k=>`<div class="feature ${f[k]?'true':''}">${labels[k]}</div>`).join('');
-}
+  // intent = pressed button
+  renderTagRow('response-intent-row', [type], 'intent', labelFor);
 
-function setResponseMode(mode){
-  $('auto-response').classList.toggle('hidden',mode!=='auto');
-  $('manual-response').classList.toggle('hidden',mode!=='manual');
+  // response perception = inferred effect
+  const inferred = inferResponsePerception(currentSequence, seq);
+  renderResponsePerception('response-responseperception-row', inferred);
+
+  const rPer = classify(seq);
+  renderMatchRow('response-perception-row', rPer, currentGenPerception, labelFor);
+  renderAntiRow('response-antitags-row', currentGenPerception, rPer, labelFor);
+
+  const rEval = evalKeysTrue(seq);
+  renderMatchRow('response-eval-row', rEval, currentGenEvalKeys, evalLabelFor);
+  renderAntiRow('response-eval-antitags-row', currentGenEvalKeys, rEval, evalLabelFor);
 }
 
 function submitManual(){
-  const val=$('manual-input').value.trim();
   if(!currentSequence) return;
-  const seq=[...val].map(c=>Number(c)-1).filter(n=>n>=0&&n<4);
+  const val = $('manual-input').value.trim();
+  const seq = [...val].map(c=>Number(c)-1).filter(n=>n>=0&&n<4);
   if(!seq.length) return;
-  renderResponse(seq,'manual-output','manual-meta','manual-features');
+
+  $('manual-output').innerHTML = render(seq);
+
+  const inferred = inferResponsePerception(currentSequence, seq);
+  renderResponsePerception('manual-responseperception-row', inferred);
+
+  const rPer = classify(seq);
+  renderMatchRow('manual-perception-row', rPer, currentGenPerception, labelFor);
+  renderAntiRow('manual-antitags-row', currentGenPerception, rPer, labelFor);
+
+  const rEval = evalKeysTrue(seq);
+  renderMatchRow('manual-eval-row', rEval, currentGenEvalKeys, evalLabelFor);
+  renderAntiRow('manual-eval-antitags-row', currentGenEvalKeys, rEval, evalLabelFor);
 }
+
+// initial placeholders
+renderTagRow('generator-intent-row', [], 'intent', labelFor);
+renderTagRow('generator-perception-row', [], 'gen', labelFor);
+renderTagRow('generator-eval-row', [], 'evalgen', evalLabelFor);
+renderTagRow('response-intent-row', [], 'intent', labelFor);
+renderResponsePerception('response-responseperception-row', null);
+renderResponsePerception('manual-responseperception-row', null);
+renderMatchRow('response-perception-row', [], [], labelFor);
+renderAntiRow('response-antitags-row', [], [], labelFor);
+renderMatchRow('response-eval-row', [], [], evalLabelFor);
+renderAntiRow('response-eval-antitags-row', [], [], evalLabelFor);
+renderMatchRow('manual-perception-row', [], [], labelFor);
+renderAntiRow('manual-antitags-row', [], [], labelFor);
+renderMatchRow('manual-eval-row', [], [], evalLabelFor);
+renderAntiRow('manual-eval-antitags-row', [], [], evalLabelFor);
 </script>
+
 </body>
 </html>
