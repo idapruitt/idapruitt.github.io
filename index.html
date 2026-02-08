@@ -105,10 +105,27 @@
     <button onclick="respond('newfilling')">New Filling</button>
     <button onclick="respond('randomfilling')">Random Filling</button>
     <button onclick="respond('newends')">New Ends</button>
-    <button onclick="respond('chaotic_resp')">Chaotic</button>
+    <button onclick="respond('chaotic_length_match')">Chaotic Length Match</button>
     <button onclick="respond('rotation')">Rotation</button>
     <button onclick="respond('partialcopy')">Partial Copy</button>
-  </div>
+    <button onclick="respond('collapse')">Collapse</button>
+    <button onclick="respond('expansion')">Expansion</button>
+    <button onclick="respond('addition')">Addition</button>
+    <button onclick="respond('subtract')">Subtract</button>
+  
+    <button onclick="respond('alternatingcopy')">Alternating Copy</button>
+    <button onclick="respond('frontaddition')">Front Addition</button>
+    <button onclick="respond('frontsubtraction')">Front Subtraction</button>
+    <button onclick="respond('copysection')">Copy Section</button>
+    <button onclick="respond('offbyonecopy')">Off by One Copy</button>
+
+    <button onclick="respond('leftmirror')">Left Mirror</button>
+    <button onclick="respond('rightmirror')">Right Mirror</button>
+
+    <button onclick="respond('offbyonereverse')">Off by One Reverse</button>
+    <button onclick="respond('chaotic')">Chaotic</button>
+    <button onclick="respond('chaotic_symbol_match')">Chaotic Symbol Match</button>
+</div>
 
   <div class="output" id="response-output"></div>
 
@@ -182,7 +199,21 @@ const LABELS = {
   sandwich:'Sandwich', crustedsandwich:'Crusted Sandwich',
   doublesandwich:'Double Sandwich', crusteddoublesandwich:'Crusted Double Sandwich',
   reversesandwich:'Reverse Sandwich', reversedoublesandwich:'Reverse Double Sandwich',
-  copy:'Copy', reverse:'Reverse', scramble:'Scramble', swap:'Symbol Swap', takeover:'Takeover', newfilling:'New Filling', randomfilling:'Random Filling', newends:'New Ends', chaotic_resp:'Chaotic', rotation:'Rotation', partialcopy:'Partial Copy'
+  copy:'Copy', reverse:'Reverse', scramble:'Scramble', swap:'Symbol Swap', takeover:'Takeover', newfilling:'New Filling', randomfilling:'Random Filling', newends:'New Ends',  rotation:'Rotation', partialcopy:'Partial Copy',
+  collapse:'Collapse',
+  expansion:'Expansion',
+  addition:'Addition',
+  subtract:'Subtract',
+  alternatingcopy:'Alternating Copy',
+  frontaddition:'Front Addition',
+  frontsubtraction:'Front Subtraction',
+  copysection:'Copy Section',
+  offbyonecopy:'Off by One Copy',
+  leftmirror:'Left Mirror',
+  rightmirror:'Right Mirror',
+  chaotic_length_match:'Chaotic Length Match',
+  chaotic_symbol_match:'Chaotic Symbol Match',
+  offbyonereverse:'Off by One Reverse'
 };
 const labelFor = t => LABELS[t] || t;
 
@@ -553,97 +584,232 @@ function isAllSame(a){
   for(let i=1;i<a.length;i++) if(a[i]!==v) return false;
   return true;
 }
-function inferResponsePerception(original, resp){
-  if(!original || !resp) return null;
+
+
+function isSuffix(a,b){
+  // is a a suffix of b?
+  if(a.length>b.length) return false;
+  const off = b.length - a.length;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i+off]) return false;
+  return true;
+}
+
+function isPrefix(a,b){
+  if(a.length>b.length) return false;
+  for(let i=0;i<a.length;i++) if(a[i]!==b[i]) return false;
+  return true;
+}
+function isSubsequencePreserveOrder(sub, full){
+  let j=0;
+  for(let i=0;i<sub.length;i++){
+    while(j<full.length && full[j]!==sub[i]) j++;
+    if(j===full.length) return false;
+    j++;
+  }
+  return true;
+}
+function inferResponsePerceptions(original, resp){
+  if(!original || !resp) return [];
   const n0 = original.length;
   const n1 = resp.length;
-  if(n0===0 || n1===0) return null;
+  if(n0===0 || n1===0) return [];
 
-  // LENGTH-AGNOSTIC FILLING RULES
-  // If first + last match generator's first + last, it's a filling move (unless exact copy)
+  const out = [];
+  const add = (k)=>{ if(k && !out.includes(k)) out.push(k); };
+
+  // Helper: count same-position matches up to min length
+  const minLen = Math.min(n0, n1);
+  let posMatches = 0;
+  for(let i=0;i<minLen;i++) if(resp[i]===original[i]) posMatches++;
+
+  // LENGTH-AGNOSTIC FILLING
   if(n0>=2 && n1>=2 && resp[0]===original[0] && resp[n1-1]===original[n0-1]){
     // Exact copy beats filling
-    if(n0===n1 && arraysEqual(resp, original)) return 'copy';
+    if(n0===n1 && arraysEqual(resp, original)){
+      add('copy');
+      return out;
+    }
 
     const interiorResp = resp.slice(1, n1-1);
     const interiorOrig = original.slice(1, n0-1);
 
-    // NEW FILLING:
-    // total change of interior → no position matches original interior (up to overlap)
+    // New Filling: total change of interior (no position matches up to overlap)
     const overlap = Math.min(interiorResp.length, interiorOrig.length);
     let anyMatch = false;
     for(let i=0;i<overlap;i++){
-      if(interiorResp[i] === interiorOrig[i]){
-        anyMatch = true;
-        break;
+      if(interiorResp[i] === interiorOrig[i]){ anyMatch = true; break; }
+    }
+    if(!anyMatch) add('newfilling');
+    add('randomfilling'); // randomfilling can be anything once ends match (including newfilling); we keep both
+  }
+
+  // Length-changing operations (can co-occur with other properties)
+  if(n1 > n0 && isSuffix(original, resp)) add('frontaddition');
+  if(n1 < n0 && isSuffix(resp, original)) add('frontsubtraction');
+  if(n1 > n0 && isPrefix(original, resp)) add('addition');
+  if(n1 < n0 && isPrefix(resp, original)) add('subtract');
+  if(n1 < n0 && isSubsequencePreserveOrder(resp, original)) add('collapse');
+
+  // Expansion: longer, reducible to original by removing adjacent duplicates
+  if(n1 > n0){
+    let reduced = [...resp];
+    let changed = true;
+    while(changed){
+      changed = false;
+      for(let i=0;i<reduced.length-1;i++){
+        if(reduced[i] === reduced[i+1]){
+          reduced.splice(i+1, 1);
+          changed = true;
+          break;
+        }
       }
     }
-    if(!anyMatch) return 'newfilling';
-
-    // RANDOM FILLING:
-    // ends match, interior can be anything (including partial overlap)
-    return 'randomfilling';
+    if(arraysEqual(reduced, original)) add('expansion');
   }
 
-  // If lengths differ and not a filling move
-  if(n0 !== n1){
-    const mlen = Math.min(n0, n1);
-    let matches=0;
-    for(let i=0;i<mlen;i++) if(resp[i]===original[i]) matches++;
-    if(matches>=2) return 'partialcopy';
-    return 'chaotic_resp';
-  }
+  // Same-length classic moves
+  if(n0 === n1){
+    if(arraysEqual(resp, original)) add('copy');
 
-  const n = n0;
+    const rev = [...original].reverse();
+    if(arraysEqual(resp, rev)) add('reverse');
 
-  // Exact copy
-  if(arraysEqual(resp, original)) return 'copy';
+    // Off by One Reverse: reverse with exactly one mistake
+    {
+      const rev2 = [...original].reverse();
+      let d = 0;
+      for(let i=0;i<n0;i++) if(resp[i]!==rev2[i]) d++;
+      if(d===1) add('offbyonereverse');
+    }
 
-  // Exact reverse
-  const rev = [...original].reverse();
-  if(arraysEqual(resp, rev)) return 'reverse';
 
-  // Rotation
-  for(let k=1;k<=n-1;k++){
-    const rot = original.slice(k).concat(original.slice(0,k));
-    if(arraysEqual(resp, rot)) return 'rotation';
-  }
+    for(let k=1;k<=n0-1;k++){
+      const rot = original.slice(k).concat(original.slice(0,k));
+      if(arraysEqual(resp, rot)){ add('rotation'); break; }
+    }
 
-  // Takeover
-  if(isAllSame(resp)) return 'takeover';
+
+    // Left/Right Mirror (works for even + odd lengths)
+    // Left Mirror: right half becomes left half reversed (odd: keep middle, drop original right, append left reversed)
+    // Right Mirror: left half becomes right half reversed (odd: keep middle, drop original left, prepend right reversed)
+    {
+      const n = n0;
+      const mid = Math.floor(n/2);
+
+      if(n % 2 === 0){
+        const left = original.slice(0, mid);
+        const right = original.slice(mid);
+
+        const leftMir = left.concat([...left].reverse());
+        const rightMir = [...right].reverse().concat(right);
+
+        if(arraysEqual(resp, leftMir)) add('leftmirror');
+        if(arraysEqual(resp, rightMir)) add('rightmirror');
+      } else {
+        const left = original.slice(0, mid);
+        const middle = original[mid];
+        const right = original.slice(mid+1);
+
+        const leftMir = left.concat([middle], [...left].reverse());
+        const rightMir = [...right].reverse().concat([middle], right);
+
+        if(arraysEqual(resp, leftMir)) add('leftmirror');
+        if(arraysEqual(resp, rightMir)) add('rightmirror');
+      }
+    }
+
+    if(isAllSame(resp)) add('takeover');
+
+  
+    // Off by One Copy: exactly one position differs
+    let diffCount = 0;
+    for(let i=0;i<n0;i++) if(resp[i]!==original[i]) diffCount++;
+    if(diffCount===1) add('offbyonecopy');
+
+    // Alternating Copy: every other position matches, the others differ (start on 0 or 1)
+    if(diffCount>0){
+      let okStart0=true, okStart1=true, anyDiffStart0=false, anyDiffStart1=false;
+      for(let i=0;i<n0;i++){
+        // start on 0 means evens match, odds differ
+        if(i%2===0){
+          if(resp[i]!==original[i]) okStart0=false;
+        }else{
+          if(resp[i]===original[i]) okStart0=false;
+          else anyDiffStart0=true;
+        }
+        // start on 1 means odds match, evens differ
+        if(i%2===1){
+          if(resp[i]!==original[i]) okStart1=false;
+        }else{
+          if(resp[i]===original[i]) okStart1=false;
+          else anyDiffStart1=true;
+        }
+      }
+      if(okStart0 && anyDiffStart0) add('alternatingcopy');
+      if(okStart1 && anyDiffStart1) add('alternatingcopy');
+    }
+
+    // Copy Section: a contiguous run of >=2 matching positions, up to length-2
+    if(diffCount>0 && n0>=4){
+      let best=0, cur=0;
+      for(let i=0;i<n0;i++){
+        if(resp[i]===original[i]){ cur++; if(cur>best) best=cur; }
+        else cur=0;
+      }
+      if(best>=2 && best<=n0-2) add('copysection');
+    }
 
   // Symbol Swap (structure preserved under permutation)
-  let map = new Map();
-  let consistent = true;
-  for(let i=0;i<n;i++){
-    const o = original[i], r = resp[i];
-    if(map.has(o) && map.get(o)!==r){ consistent=false; break; }
-    map.set(o,r);
+    let map = new Map();
+    let consistent = true;
+    for(let i=0;i<n0;i++){
+      const o = original[i], r = resp[i];
+      if(map.has(o) && map.get(o)!==r){ consistent=false; break; }
+      map.set(o,r);
+    }
+    if(consistent){
+      const vals=[...map.values()];
+      const bij=(new Set(vals)).size===vals.length;
+      let changed=false;
+      for(const [o,r] of map.entries()) if(o!==r){ changed=true; break; }
+      if(bij && changed) add('swap');
+    }
+
+    if(multisetEqual(resp, original)) add('scramble');
+
+    // New Ends
+    if(n0>=2){
+      const endsChanged = (resp[0]!==original[0]) && (resp[n0-1]!==original[n0-1]);
+      const interiorCopied = arraysEqual(resp.slice(1,n0-1), original.slice(1,n0-1));
+      if(endsChanged && interiorCopied) add('newends');
+    }
   }
-  if(consistent){
-    const vals=[...map.values()];
-    const bij=(new Set(vals)).size===vals.length;
-    let changed=false;
-    for(const [o,r] of map.entries()) if(o!==r){ changed=true; break; }
-    if(bij && changed) return 'swap';
+
+  // Partial copy heuristic (works across lengths too)
+  if(posMatches >= 2 && !(n0===n1 && arraysEqual(resp, original))) add('partialcopy');
+
+
+  // Chaotic Symbol Match: same symbol TYPES, random amounts/length
+  {
+    const setO = new Set(original);
+    const setR = new Set(resp);
+    if(setO.size === setR.size){
+      let same = true;
+      for(const v of setO) if(!setR.has(v)) { same=false; break; }
+      if(same && !arraysEqual(resp, original)){
+        // avoid tagging exact copy/perm cases; only tag if it wasn't already classified as something else
+        add('chaotic_symbol_match');
+      }
+    }
   }
 
-  // Scramble
-  if(multisetEqual(resp, original)) return 'scramble';
-
-  // New Ends
-  if(n>=2){
-    const endsChanged = (resp[0]!==original[0]) && (resp[n-1]!==original[n-1]);
-    const interiorCopied = arraysEqual(resp.slice(1,n-1), original.slice(1,n-1));
-    if(endsChanged && interiorCopied) return 'newends';
+  // Chaotic fallback if nothing else was detected
+  if(out.length === 0){
+    if(n0 === n1) add('chaotic_length_match');
+    else add('chaotic');
   }
 
-  // Partial copy
-  let matches=0;
-  for(let i=0;i<n;i++) if(resp[i]===original[i]) matches++;
-  if(matches>=2 && matches<n) return 'partialcopy';
-
-  return 'chaotic_resp';
+  return out;
 }
 
 // Symbol swap mapping to preserve structure while changing symbols
@@ -667,9 +833,20 @@ let currentGenPerception=[];
 let currentGenEvalKeys=[];
 
 // ================= UI HELPERS =================
-function renderResponsePerception(containerId, key){
-  if(!key) return renderTagRow(containerId, [], 'gen', labelFor);
-  renderTagRow(containerId, [key], 'gen', labelFor);
+function renderResponsePerception(rowId, perceptions){
+  const el = $(rowId);
+  if(!el) return;
+
+  const arr = Array.isArray(perceptions) ? perceptions : (perceptions ? [perceptions] : []);
+  if(!arr.length){
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  el.style.display = '';
+
+  // Blue-style pills in your theme are `.pill.gen`
+  el.innerHTML = arr.map(k => `<span class="pill gen">${labelFor(k)}</span>`).join('');
 }
 
 // ================= DISPATCH =================
@@ -812,7 +989,7 @@ function respond(type){
       break;
     }
 
-    case 'chaotic_resp':
+    case 'chaotic_length_match':
       seq = Array.from({length:n},()=>randInt(0,3));
       break;
 
@@ -834,6 +1011,152 @@ function respond(type){
       break;
     }
 
+    case 'collapse': {
+      if(n<=1){ seq=[...currentSequence]; break; }
+      const removeCount = randInt(1, n-1);
+      const idxs = shuffle([...Array(n).keys()]).slice(0, removeCount);
+      const removeSet = new Set(idxs);
+      seq = currentSequence.filter((_,i)=>!removeSet.has(i));
+      break;
+    }
+
+    case 'expansion': {
+      if(n<=0){ seq=[]; break; }
+      const dupCount = randInt(1, Math.min(3, n));
+      const idxs = shuffle([...Array(n).keys()]).slice(0, dupCount).sort((a,b)=>a-b);
+      let out=[...currentSequence];
+      let offset=0;
+      for(const i of idxs){
+        out.splice(i+1+offset, 0, out[i+offset]);
+        offset++;
+      }
+      seq = out;
+      break;
+    }
+
+    case 'addition': {
+      if(n>=10){ seq=[...currentSequence]; break; }
+      const maxAdd = 10 - n;
+      const addCount = randInt(1, maxAdd);
+      const tail = Array.from({length:addCount},()=>randInt(0,3));
+      seq = currentSequence.concat(tail);
+      break;
+    }
+
+    case 'subtract': {
+      if(n<=1){ seq=[...currentSequence]; break; }
+      const cut = randInt(1, n-1);
+      seq = currentSequence.slice(0, n-cut);
+      break;
+    }
+
+    case 'alternatingcopy': {
+      // keep every other symbol; change the rest to a DIFFERENT symbol
+      const start = randInt(0,1); // 0 => keep even indices, 1 => keep odd indices
+      seq = currentSequence.map((v,i)=>{
+        if(i % 2 === start) return v;
+        const opts = [0,1,2,3].filter(x => x !== v);
+        return choice(opts);
+      });
+      break;
+    }
+
+    case 'frontaddition': {
+      if(n>=10){ seq=[...currentSequence]; break; }
+      const maxAdd = 10 - n;
+      const addCount = randInt(1, maxAdd);
+      const head = Array.from({length:addCount},()=>randInt(0,3));
+      seq = head.concat(currentSequence);
+      break;
+    }
+
+    case 'frontsubtraction': {
+      if(n<=1){ seq=[...currentSequence]; break; }
+      const cut = randInt(1, n-1);
+      seq = currentSequence.slice(cut);
+      break;
+    }
+
+    case 'copysection': {
+      if(n<=3){ seq=[...currentSequence]; break; } // need room to change outside the section
+      const maxLen = Math.max(2, n-2);
+      const L = randInt(2, maxLen);
+      const startIdx = randInt(0, n - L);
+      seq = currentSequence.map((v,i)=>{
+        if(i>=startIdx && i<startIdx+L) return v;
+        const opts=[0,1,2,3].filter(x=>x!==v);
+        return choice(opts);
+      });
+      // Ensure not identical overall
+      if(arraysEqual(seq, currentSequence)){
+        const i = (startIdx+L) % n;
+        const opts=[0,1,2,3].filter(x=>x!==seq[i]);
+        seq[i]=choice(opts);
+      }
+      break;
+    }
+
+    case 'offbyonecopy': {
+      if(n<=1){ seq=[...currentSequence]; break; }
+      const i = randInt(0, n-1);
+      seq = currentSequence.map((v,idx)=>{
+        if(idx!==i) return v;
+        const opts=[0,1,2,3].filter(x=>x!==v);
+        return choice(opts);
+      });
+      break;
+    }
+
+    case 'leftmirror': {
+      const mid = Math.floor(n/2);
+      if(n%2===0){
+        const left = currentSequence.slice(0, mid);
+        seq = left.concat([...left].reverse());
+      }else{
+        const left = currentSequence.slice(0, mid);
+        const middle = currentSequence[mid];
+        seq = left.concat([middle], [...left].reverse());
+      }
+      break;
+    }
+
+    case 'rightmirror': {
+      const mid = Math.floor(n/2);
+      if(n%2===0){
+        const right = currentSequence.slice(mid);
+        seq = [...right].reverse().concat(right);
+      }else{
+        const right = currentSequence.slice(mid+1);
+        const middle = currentSequence[mid];
+        seq = [...right].reverse().concat([middle], right);
+      }
+      break;
+    }
+
+    case 'offbyonereverse': {
+      if(n<=0){ seq=[]; break; }
+      seq = [...currentSequence].reverse();
+      const i = randInt(0, n-1);
+      const opts=[0,1,2,3].filter(x=>x!==seq[i]);
+      seq[i]=choice(opts);
+      break;
+    }
+
+    case 'chaotic': {
+      // Fully random including random length (1..10)
+      const L = randInt(1, 10);
+      seq = Array.from({length:L},()=>randInt(0,3));
+      break;
+    }
+
+    case 'chaotic_symbol_match': {
+      // Same symbol types as original, random amounts + random length
+      const types = Array.from(new Set(currentSequence));
+      const L = randInt(1, 10);
+      seq = Array.from({length:L},()=>choice(types));
+      break;
+    }
+
     default:
       seq=[...currentSequence];
       break;
@@ -845,7 +1168,7 @@ function respond(type){
   renderTagRow('response-intent-row', [type], 'intent', labelFor);
 
   // response perception = inferred effect
-  const inferred = inferResponsePerception(currentSequence, seq);
+  const inferred = inferResponsePerceptions(currentSequence, seq);
   renderResponsePerception('response-responseperception-row', inferred);
 
   const rPer = classify(seq);
@@ -865,7 +1188,7 @@ function submitManual(){
 
   $('manual-output').innerHTML = render(seq);
 
-  const inferred = inferResponsePerception(currentSequence, seq);
+  const inferred = inferResponsePerceptions(currentSequence, seq);
   renderResponsePerception('manual-responseperception-row', inferred);
 
   const rPer = classify(seq);
