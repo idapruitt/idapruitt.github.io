@@ -51,7 +51,7 @@
   <div class="controls">
     <button onclick="run('uniform')">Uniform</button>
     <button onclick="run('alternating')">Alternating</button>
-    <button onclick="run('symalt')">Symmetrical Alternating</button>
+    <button onclick="run('symalt')">Symmetric Alternating</button>
     <button onclick="run('altuniformrandom')">Alt Uniform + Random</button>
     <button onclick="run('symmetric')">Symmetric</button>
     <button onclick="run('repeating')">Repeating Sequence</button>
@@ -192,7 +192,7 @@ const choice = a => a[randInt(0,a.length-1)];
 const choiceFrom = a => a[Math.floor(Math.random()*a.length)];
 
 const LABELS = {
-  uniform:'Uniform', alternating:'Alternating', symalt:'Symmetrical Alternating', symmetric:'Symmetric', repeating:'Repeating Sequence',
+  uniform:'Uniform', alternating:'Alternating', symalt:'Symmetric Alternating', symmetric:'Symmetric', repeating:'Repeating Sequence',
   dominant:'Dominant Symbol', chaotic:'Chaotic',
   equal2:'Equal 2', equal3:'Equal 3', equal4:'Equal 4',
   pairs:'Pairs', triples:'Triples', block:'Blocks',
