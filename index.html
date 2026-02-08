@@ -64,7 +64,7 @@
 
     <button onclick="run('pairs')">Pairs</button>
     <button onclick="run('triples')">Triples</button>
-    <button onclick="run('block')">Block</button>
+    <button onclick="run('block')">Blocks</button>
 
     <button onclick="run('doubles')">Doubles</button>
     <button onclick="run('thirds')">Thirds</button>
@@ -195,7 +195,7 @@ const LABELS = {
   uniform:'Uniform', alternating:'Alternating', symalt:'Symmetrical Alternating', symmetric:'Symmetric', repeating:'Repeating Sequence',
   dominant:'Dominant Symbol', chaotic:'Chaotic',
   equal2:'Equal 2', equal3:'Equal 3', equal4:'Equal 4',
-  pairs:'Pairs', triples:'Triples', block:'Block',
+  pairs:'Pairs', triples:'Triples', block:'Blocks',
   doubles:'Doubles', thirds:'Thirds', twosides:'Two Sides', partialalt:'Partial Alternating',
   sandwich:'Sandwich', crustedsandwich:'Crusted Sandwich',
   doublesandwich:'Double Sandwich', crusteddoublesandwich:'Crusted Double Sandwich',
@@ -487,9 +487,31 @@ function isTriplesOnly(seq){
   return true;
 }
 
+function isBlocksPattern(seq){
+  // 2–4 uniform blocks, each block length >= 2
+  const n = seq.length;
+  if(n < 4) return false;
+  let runs = [];
+  let i = 0;
+  while(i < n){
+    let j = i+1;
+    while(j < n && seq[j] === seq[i]) j++;
+    runs.push(j - i);
+    i = j;
+  }
+  const blocks = runs.length;
+  if(blocks < 2 || blocks > 4) return false;
+  for(const r of runs){
+    if(r < 2) return false;
+  }
+  return true;
+}
+
 function classify(seq){
   const len=seq.length;
   const counts={}, tags=[];
+  // Blocks perception (matches the Block generator structure)
+  if(isBlocksPattern(seq)) tags.push('block');
   // Alt Uniform + Random (can co-exist with Partial Alternating)
   if(isAltUniformRandom(seq)) tags.push('altuniformrandom');
 
