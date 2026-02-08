@@ -51,10 +51,11 @@
   <div class="controls">
     <button onclick="run('uniform')">Uniform</button>
     <button onclick="run('alternating')">Alternating</button>
-    <button onclick="run('symalt')">Symmetric Alt</button>
+    <button onclick="run('symalt')">Symmetrical Alternating</button>
+    <button onclick="run('altuniformrandom')">Alt Uniform + Random</button>
     <button onclick="run('symmetric')">Symmetric</button>
-    <button onclick="run('repeating')">Repeating</button>
-    <button onclick="run('dominant')">Dominant</button>
+    <button onclick="run('repeating')">Repeating Sequence</button>
+    <button onclick="run('dominant')">Dominant Symbol</button>
     <button onclick="run('chaotic')">Chaotic</button>
 
     <button onclick="run('equal2')">Equal 2</button>
@@ -191,8 +192,8 @@ const choice = a => a[randInt(0,a.length-1)];
 const choiceFrom = a => a[Math.floor(Math.random()*a.length)];
 
 const LABELS = {
-  uniform:'Uniform', alternating:'Alternating', symalt:'Symmetric Alt', symmetric:'Symmetric', repeating:'Repeating',
-  dominant:'Dominant', chaotic:'Chaotic',
+  uniform:'Uniform', alternating:'Alternating', symalt:'Symmetrical Alternating', symmetric:'Symmetric', repeating:'Repeating Sequence',
+  dominant:'Dominant Symbol', chaotic:'Chaotic',
   equal2:'Equal 2', equal3:'Equal 3', equal4:'Equal 4',
   pairs:'Pairs', triples:'Triples', block:'Block',
   doubles:'Doubles', thirds:'Thirds', twosides:'Two Sides', partialalt:'Partial Alternating',
@@ -213,7 +214,14 @@ const LABELS = {
   rightmirror:'Right Mirror',
   chaotic_length_match:'Chaotic Length Match',
   chaotic_symbol_match:'Chaotic Symbol Match',
-  offbyonereverse:'Off by One Reverse'
+  offbyonereverse:'Off by One Reverse',  multiple_repetitions:'Multiple Repetitions',
+  repetition_4:'Repetitions 4',
+  repetition_5:'Repetitions 5',
+  repetition_6:'Repetitions 6',
+  repetition_7:'Repetitions 7',
+  repetition_8:'Repetitions 8',
+  repetition_9:'Repetitions 9',
+  altuniformrandom:'Alt Uniform + Random'
 };
 const labelFor = t => LABELS[t] || t;
 
@@ -283,6 +291,23 @@ function genSymAlt(len){
   let a=randInt(0,3), b; do{ b=randInt(0,3); }while(b===a);
   return Array.from({length:len},(_,i)=>i%2 ? b : a);
 }
+
+function genAltUniformRandom(){
+  const len = randInt(4,10);
+  const uniform = randInt(0,3);
+  const start = randInt(0,1); // uniform positions start at index 0 or 1
+  let out = [];
+  for(let i=0;i<len;i++){
+    if(i%2===start){
+      out.push(uniform);
+    }else{
+      const opts = [0,1,2,3].filter(x=>x!==uniform);
+      out.push(choice(opts));
+    }
+  }
+  return out;
+}
+
 function genSymmetric(len){
   const h=Math.ceil(len/2);
   const l=Array.from({length:h},()=>randInt(0,3));
@@ -414,9 +439,60 @@ function genReverseDoubleSandwich(){
 }
 
 // ================= CLASSIFIER (with overrides) =================
+function isAltUniformRandom(seq){
+  const n = seq.length;
+  if(n < 4) return false;
+
+  for(let start=0; start<=1; start++){
+    const uniform = seq[start];
+    let ok = true;
+    let firstOther = null;
+    let hasVarOther = false;
+
+    for(let i=0;i<n;i++){
+      if(i%2===start){
+        if(seq[i] !== uniform){ ok=false; break; }
+      }else{
+        if(seq[i] === uniform){ ok=false; break; }
+        if(firstOther === null) firstOther = seq[i];
+        else if(seq[i] !== firstOther) hasVarOther = true;
+      }
+    }
+    if(ok && hasVarOther) return true; // exclude strict ABAB
+  }
+  return false;
+}
+
+function isPairsOnly(seq){
+  const n = seq.length;
+  if(n < 2 || n % 2 !== 0) return false;
+  for(let i=0;i<n;i+=2){
+    // must be a pair
+    if(seq[i] !== seq[i+1]) return false;
+    // adjacent pairs must be different symbols (so AAAA isn't two pairs)
+    if(i>=2 && seq[i] === seq[i-2]) return false;
+  }
+  return true;
+}
+
+function isTriplesOnly(seq){
+  const n = seq.length;
+  if(n < 3 || n % 3 !== 0) return false;
+  for(let i=0;i<n;i+=3){
+    // must be a triple
+    if(seq[i] !== seq[i+1] || seq[i] !== seq[i+2]) return false;
+    // adjacent triples must be different symbols (so AAAAAA isn't two triples)
+    if(i>=3 && seq[i] === seq[i-3]) return false;
+  }
+  return true;
+}
+
 function classify(seq){
   const len=seq.length;
   const counts={}, tags=[];
+  // Alt Uniform + Random (can co-exist with Partial Alternating)
+  if(isAltUniformRandom(seq)) tags.push('altuniformrandom');
+
   seq.forEach(c=>counts[c]=(counts[c]||0)+1);
   const uniq=Object.keys(counts).length;
 
@@ -456,8 +532,8 @@ function classify(seq){
     if(c===3) tripleSeg++;
     i+=c;
   }
-  if(pairSeg>=1) tags.push('pairs');
-  if(tripleSeg>=1) tags.push('triples');
+  if(isPairsOnly(seq)) tags.push('pairs');
+  if(isTriplesOnly(seq)) tags.push('triples');
 
   if(runs.length===2 && runs[0].sym!==runs[1].sym){
     tags.push('twosides');
@@ -526,13 +602,25 @@ function classify(seq){
 const EVAL_KEYS = [
   'heart_used','star_used','triangle_used','x_used',
   'length_1','length_2','length_3','length_4','length_5','length_6','length_7','length_8','length_9','length_10',
-  'pair_used','triple_used','multiple_pairs','multiple_triples'
+  'pair_used','triple_used','multiple_pairs','multiple_triples',  'multiple_repetitions',
+  'repetition_4',
+  'repetition_5',
+  'repetition_6',
+  'repetition_7',
+  'repetition_8',
+  'repetition_9'
 ];
 const EVAL_LABELS = {
-  heart_used:'heart used', star_used:'star used', triangle_used:'triangle used', x_used:'x used',
+heart_used:'heart used', star_used:'star used', triangle_used:'triangle used', x_used:'x used',
   length_1:'length 1', length_2:'length 2', length_3:'length 3', length_4:'length 4', length_5:'length 5',
   length_6:'length 6', length_7:'length 7', length_8:'length 8', length_9:'length 9', length_10:'length 10',
-  pair_used:'pair used', triple_used:'triple used', multiple_pairs:'multiple pairs', multiple_triples:'multiple triples'
+  pair_used:'pair used', triple_used:'triple used', multiple_pairs:'multiple pairs', multiple_triples:'multiple triples',  multiple_repetitions:'multiple 4+ in a row',
+  repetition_4:'4 in a row',
+  repetition_5:'5 in a row',
+  repetition_6:'6 in a row',
+  repetition_7:'7 in a row',
+  repetition_8:'8 in a row',
+  repetition_9:'9 in a row'
 };
 const evalLabelFor = k => EVAL_LABELS[k] || k;
 
@@ -563,6 +651,31 @@ function evalKeysTrue(seq){
   st.multiple_pairs = pairsCount>=2;
   st.multiple_triples = triplesCount>=2;
 
+  // Repetition exact lengths (4–9) and Multiple Repetitions (2+ runs of length 4–9)
+  let repRuns = 0;
+  const repLenSeen = {4:false,5:false,6:false,7:false,8:false,9:false};
+
+  let j = 0;
+  while(j < len){
+    let run = 1;
+    while(j+run < len && seq[j+run] === seq[j]) run++;
+
+    if(run >= 4 && run <= 9){
+      repRuns++;
+      repLenSeen[run] = true;
+    }
+
+    j += run;
+  }
+
+  st.repetition_4 = repLenSeen[4];
+  st.repetition_5 = repLenSeen[5];
+  st.repetition_6 = repLenSeen[6];
+  st.repetition_7 = repLenSeen[7];
+  st.repetition_8 = repLenSeen[8];
+  st.repetition_9 = repLenSeen[9];
+
+  st.multiple_repetitions = repRuns >= 2;
   return EVAL_KEYS.filter(k => !!st[k]);
 }
 
@@ -856,6 +969,7 @@ function run(type){
     case 'uniform': seq=genUniform(len); break;
     case 'alternating': seq=genAlternating(len); break;
     case 'symalt': seq=genSymAlt(len); break;
+    case 'altuniformrandom': seq=genAltUniformRandom(); break;
     case 'symmetric': seq=genSymmetric(len); break;
     case 'repeating': seq=genRepeating(len); break;
     case 'dominant': seq=genDominant(len); break;
