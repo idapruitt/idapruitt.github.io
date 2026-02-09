@@ -40,7 +40,46 @@
     .pill.anti{background:#4a1414;border-color:#ff4d4d;color:#ffd1d1;}
 
     input[type=text]{padding:8px;border-radius:8px;border:none;width:220px;margin-right:8px;background:#1f1f2e;color:#fff;}
-  </style>
+  
+
+/* --- internal scoring chart --- */
+.scoreWrap{display:flex;gap:12px;align-items:flex-start;margin-top:8px;}
+.scoreGrid{
+  position:relative;
+  width:140px;height:140px;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.25);
+  background:
+    linear-gradient(to right, rgba(0,0,0,0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.10) 1px, transparent 1px);
+  background-size:28px 28px;
+  background-color:rgba(255,255,255,0.10);
+}
+.scoreGrid:before{
+  content:"";
+  position:absolute;left:0;top:50%;
+  width:100%;height:1px;background:rgba(0,0,0,0.35);
+}
+.scoreGrid:after{
+  content:"";
+  position:absolute;top:0;left:50%;
+  width:1px;height:100%;background:rgba(0,0,0,0.35);
+}
+.scoreDot{
+  position:absolute;
+  width:10px;height:10px;border-radius:999px;
+  background:rgba(0,0,0,0.75);
+  box-shadow:0 0 0 2px rgba(255,255,255,0.35);
+  transform:translate(-50%,-50%);
+}
+.scoreAxisLabel{
+  font-size:0.75rem;
+  opacity:0.65;
+  margin-top:6px;
+  text-align:center;
+}
+.scoreTextCol{flex:1;min-width:0;}
+</style>
 </head>
 <body>
 
@@ -130,6 +169,8 @@
 
   <div class="output" id="response-output"></div>
 
+  <div id="response-relation-debug" style="opacity:0.6;font-size:0.9rem;margin-top:8px;"></div>
+
   <div class="pill-title">Response Intent</div>
   <div class="pill-row" id="response-intent-row"></div>
 
@@ -159,6 +200,8 @@
   </div>
 
   <div class="output" id="manual-output"></div>
+
+  <div id="manual-relation-debug" style="opacity:0.6;font-size:0.9rem;margin-top:8px;"></div>
 
   <div class="pill-title">Response Perception</div>
   <div class="pill-row" id="manual-responseperception-row"></div>
@@ -264,6 +307,265 @@ function renderAntiRow(containerId, refTags, tags, labelFn=labelFor){
   }
   el.innerHTML = anti.map(t => `<span class="pill anti">${labelFn(t)}</span>`).join('');
 }
+
+
+// ================= RESPONSE RELATION SCORE (0..10, internal) =================
+// Uses: perception matches + eval matches - perception anti-tags - eval anti-tags
+function computeRelationScore(genPer, genEval, respPer, respEval){
+  const gP = new Set(genPer||[]);
+  const gE = new Set(genEval||[]);
+  const rP = new Set(respPer||[]);
+  const rE = new Set(respEval||[]);
+
+  const perMatchList = [...rP].filter(t => gP.has(t));
+  const evalMatchList = [...rE].filter(t => gE.has(t));
+  const perAntiList = [...gP].filter(t => !rP.has(t));
+  const evalAntiList = [...gE].filter(t => !rE.has(t));
+
+  const perMatch = perMatchList.length;
+  const evalMatch = evalMatchList.length;
+  const perAnti = perAntiList.length;
+  const evalAnti = evalAntiList.length;
+
+  // Preliminary weights (easy to tune later)
+  const wPerMatch = 3.0;
+  const wEvalMatch = 1.0;
+  const wPerAnti = 1.5;
+  const wEvalAnti = 0.5;
+
+  const raw = (perMatch*wPerMatch) + (evalMatch*wEvalMatch) - (perAnti*wPerAnti) - (evalAnti*wEvalAnti);
+
+  // Normalize to 0..10 relative to the available evidence in this generator.
+  const maxRaw = (gP.size*wPerMatch) + (gE.size*wEvalMatch);
+  const minRaw = -((gP.size*wPerAnti) + (gE.size*wEvalAnti));
+  const denom = (maxRaw - minRaw) || 1;
+
+  let score = ((raw - minRaw) / denom) * 10;
+  if(score < 0) score = 0;
+  if(score > 10) score = 10;
+
+  score = Math.round(score * 100) / 100;
+
+  return {
+    score,
+    breakdown:{
+      weights:{wPerMatch,wEvalMatch,wPerAnti,wEvalAnti},
+      counts:{perMatch, evalMatch, perAnti, evalAnti},
+      lists:{perMatch:perMatchList, evalMatch:evalMatchList, perAnti:perAntiList, evalAnti:evalAntiList},
+      raw,
+      minRaw,
+      maxRaw,
+      denom
+    }
+  };
+}
+
+// ================= RESPONSE VIRTUOSITY SCORE (0..10, internal) =================
+// Based on difficulty hierarchy of response types + execution cleanliness.
+// - Base = max difficulty of detected response perceptions.
+// - Cleanliness reduces score when generator expectations are strongly violated (anti-tags).
+const VIRT_DIFFICULTY = {
+  // easiest / robust
+  uniform: 1.5,
+  chaotic: 1.5,
+  chaotic_length_match: 2.0,
+  chaotic_symbol_match: 2.2,
+  addition: 2.5,
+  frontaddition: 3.0,
+  subtract: 1.8,
+  frontsubtraction: 2.0,
+  collapse: 2.4,
+  expansion: 2.6,
+  randomfilling: 2.6,
+  newends: 3.2,
+  newfilling: 3.4,
+  rotation: 3.2,
+  reverse: 3.4,
+
+  // medium difficulty / fragile
+  copy: 3.0,          // clean copy under time pressure can be virtuosic
+  swap:3.2,
+  symbols:3.2,       // symbol swap
+  partialcopy: 4.0,
+  copysection: 4.2,
+  alternatingcopy: 4.6,
+
+  // hard / very fragile
+  offbyonecopy: 5.0,
+  offbyonereverse: 5.4,
+  leftmirror: 6.2,
+  rightmirror: 6.2
+};
+
+function computeVirtuosityScore(genPer, genEval, respPer, respEval){
+  const gP = new Set(genPer||[]);
+  const gE = new Set(genEval||[]);
+  const rP = new Set(respPer||[]);
+  const rE = new Set(respEval||[]);
+
+  // Pick the most "difficult" detected response perception as the base.
+  let baseTag = null;
+  let base = 0;
+
+  for(const t of rP){
+    const d = VIRT_DIFFICULTY[t];
+    if(d !== undefined && d > base){
+      base = d;
+      baseTag = t;
+    }
+  }
+
+  // If we didn't detect any known response type, virtuosity is 0.
+  if(baseTag === null){
+    return {
+      score: 0,
+      breakdown:{
+        baseTag:null,
+        base:0,
+        cleanliness:0,
+        perAnti:0,
+        evalAnti:0,
+        notes:'no recognized response perception'
+      }
+    };
+  }
+
+  // Execution cleanliness: penalize missing expected generator tags (anti-tags),
+  // but don't punish divergence too harshly (playfulness).
+  const perAntiList = [...gP].filter(t => !rP.has(t));
+  const evalAntiList = [...gE].filter(t => !rE.has(t));
+  const perAnti = perAntiList.length;
+  const evalAnti = evalAntiList.length;
+
+  // Penalty rates (tunable):
+  // - perception anti-tags matter more than eval anti-tags
+  // - cap penalty so virtuosity never goes negative from divergence alone
+  const cleanliness = Math.max(0.15, 1 - (0.12*perAnti) - (0.04*evalAnti));
+
+  let score = base * cleanliness;
+
+  // Scale up to 0..10 range (base is ~0..6.2). Simple multiplier keeps tuning easy.
+  score = score * 1.6; // preliminary scaling
+  if(score > 10) score = 10;
+  if(score < 0) score = 0;
+  score = Math.round(score * 100) / 100;
+
+  return {
+    score,
+    breakdown:{
+      baseTag,
+      base:Math.round(base*100)/100,
+      cleanliness:Math.round(cleanliness*1000)/1000,
+      perAnti,
+      evalAnti,
+      perAntiList,
+      evalAntiList
+    }
+  };
+}
+
+
+
+function createScoreGrid(relation, virtuosity){
+  const holder = document.createElement('div');
+
+  const grid = document.createElement('div');
+  grid.className = 'scoreGrid';
+
+  const dot = document.createElement('div');
+  dot.className = 'scoreDot';
+
+  const r = Math.max(0, Math.min(10, relation));
+  const v = Math.max(0, Math.min(10, virtuosity));
+
+  const xPct = (r/10)*100;
+  const yPct = (1 - (v/10))*100;
+
+  dot.style.left = xPct + '%';
+  dot.style.top = yPct + '%';
+
+  grid.appendChild(dot);
+
+  // axis labels
+  const xLab = document.createElement('div');
+  xLab.className = 'scoreAxisLabel';
+  xLab.textContent = 'relation →';
+
+  const yLab = document.createElement('div');
+  yLab.className = 'scoreAxisLabel';
+  yLab.style.marginTop = '2px';
+  yLab.textContent = '↑ virtuosity';
+
+  holder.appendChild(grid);
+  holder.appendChild(xLab);
+  holder.appendChild(yLab);
+
+  return holder;
+}
+
+function setInternalScoresDebug(elId, relationRes, virtuosityRes){
+  const el = document.getElementById(elId);
+  if(!el) return;
+
+  const rScore = (typeof relationRes === 'number') ? relationRes : relationRes.score;
+  const rb = (typeof relationRes === 'number') ? null : relationRes.breakdown;
+
+  const vScore = (typeof virtuosityRes === 'number') ? virtuosityRes : virtuosityRes.score;
+  const vb = (typeof virtuosityRes === 'number') ? null : virtuosityRes.breakdown;
+
+  el.innerHTML = '';
+
+  const wrap = document.createElement('div');
+  wrap.className = 'scoreWrap';
+
+  const grid = createScoreGrid(rScore, vScore);
+
+  const textCol = document.createElement('div');
+  textCol.className = 'scoreTextCol';
+
+  const addLine = (txt)=>{
+    const d = document.createElement('div');
+    d.textContent = txt;
+    textCol.appendChild(d);
+  };
+
+  // ---- Relation ----
+  addLine(`relation score: ${rScore}`);
+
+  if(rb){
+    const w = rb.weights;
+    const c = rb.counts;
+
+    addLine(`calc: (${c.perMatch}×${w.wPerMatch}) + (${c.evalMatch}×${w.wEvalMatch}) − (${c.perAnti}×${w.wPerAnti}) − (${c.evalAnti}×${w.wEvalAnti}) = raw ${Math.round(rb.raw*100)/100}`);
+    addLine(`norm: min ${Math.round(rb.minRaw*100)/100}, max ${Math.round(rb.maxRaw*100)/100} → score = (raw−min)/(max−min)×10`);
+
+    addLine(`per match: ${rb.lists.perMatch.join(', ') || '—'}`);
+    addLine(`eval match: ${rb.lists.evalMatch.join(', ') || '—'}`);
+    addLine(`per anti: ${rb.lists.perAnti.join(', ') || '—'}`);
+    addLine(`eval anti: ${rb.lists.evalAnti.join(', ') || '—'}`);
+  }
+
+  addLine('—');
+
+  // ---- Virtuosity ----
+  addLine(`virtuosity score: ${vScore}`);
+
+  if(vb){
+    addLine(`base: ${vb.baseTag || '—'} (${vb.base})`);
+    if(vb.notes) addLine(`note: ${vb.notes}`);
+    if(vb.baseTag){
+      addLine(`cleanliness: max(0.15, 1 − 0.12×perAnti − 0.04×evalAnti) = ${vb.cleanliness}`);
+      addLine(`per anti: ${vb.perAnti} (${(vb.perAntiList||[]).join(', ') || '—'})`);
+      addLine(`eval anti: ${vb.evalAnti} (${(vb.evalAntiList||[]).join(', ') || '—'})`);
+      addLine(`score: (base×cleanliness)×1.6, clamped to 0..10`);
+    }
+  }
+
+  wrap.appendChild(grid);
+  wrap.appendChild(textCol);
+  el.appendChild(wrap);
+}
+
 
 // ================= RENDERING =================
 function render(seq){
@@ -1314,6 +1616,18 @@ function respond(type){
   const rEval = evalKeysTrue(seq);
   renderMatchRow('response-eval-row', rEval, currentGenEvalKeys, evalLabelFor);
   renderAntiRow('response-eval-antitags-row', currentGenEvalKeys, rEval, evalLabelFor);
+
+  // Relation score (internal)
+  const relationRes = computeRelationScore(currentGenPerception, currentGenEvalKeys, rPer, rEval);
+  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval);
+  window.__lastRelationScore = relationRes.score;
+  window.__lastRelationBreakdown = relationRes.breakdown;
+  window.__lastVirtuosityScore = virtuosityRes.score;
+  window.__lastVirtuosityBreakdown = virtuosityRes.breakdown;
+  console.log('[relation]', relationRes.score, {relation:relationRes.breakdown, virtuosity:virtuosityRes.breakdown, genPer:currentGenPerception, genEval:currentGenEvalKeys, respPer:rPer, respMovePer:inferred, respEval:rEval});
+  console.log('[virtuosity]', virtuosityRes.score, virtuosityRes.breakdown);
+  setInternalScoresDebug('response-relation-debug', relationRes, virtuosityRes);
+
 }
 
 function submitManual(){
@@ -1334,6 +1648,18 @@ function submitManual(){
   const rEval = evalKeysTrue(seq);
   renderMatchRow('manual-eval-row', rEval, currentGenEvalKeys, evalLabelFor);
   renderAntiRow('manual-eval-antitags-row', currentGenEvalKeys, rEval, evalLabelFor);
+
+  // Relation score (internal)
+  const relationRes = computeRelationScore(currentGenPerception, currentGenEvalKeys, rPer, rEval);
+  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval);
+  window.__lastManualRelationScore = relationRes.score;
+  window.__lastManualRelationBreakdown = relationRes.breakdown;
+  window.__lastManualVirtuosityScore = virtuosityRes.score;
+  window.__lastManualVirtuosityBreakdown = virtuosityRes.breakdown;
+  console.log('[manual relation]', relationRes.score, {relation:relationRes.breakdown, virtuosity:virtuosityRes.breakdown, genPer:currentGenPerception, genEval:currentGenEvalKeys, respPer:rPer, respMovePer:inferred, respEval:rEval});
+  console.log('[manual virtuosity]', virtuosityRes.score, virtuosityRes.breakdown);
+  setInternalScoresDebug('manual-relation-debug', relationRes, virtuosityRes);
+
 }
 
 // initial placeholders
