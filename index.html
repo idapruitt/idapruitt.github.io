@@ -317,45 +317,87 @@ function computeRelationScore(genPer, genEval, respPer, respEval){
   const rP = new Set(respPer||[]);
   const rE = new Set(respEval||[]);
 
-  const perMatchList = [...rP].filter(t => gP.has(t));
-  const evalMatchList = [...rE].filter(t => gE.has(t));
-  const perAntiList = [...gP].filter(t => !rP.has(t));
-  const evalAntiList = [...gE].filter(t => !rE.has(t));
+  // --- Partial perception compatibility ---
+  const PER_PARTIAL = [
+    ['alternating','partialalt',0.70], ['partialalt','alternating',0.60],
+    ['symalt','alternating',0.90], ['alternating','symalt',0.85],
+    ['symalt','partialalt',0.65], ['partialalt','symalt',0.65],
 
-  const perMatch = perMatchList.length;
+    ['sandwich','crustedsandwich',0.85], ['crustedsandwich','sandwich',0.80],
+    ['sandwich','doublesandwich',0.70], ['doublesandwich','sandwich',0.70],
+    ['sandwich','reversesandwich',0.65], ['reversesandwich','sandwich',0.65],
+    ['sandwich','crusteddoublesandwich',0.60], ['crusteddoublesandwich','sandwich',0.60],
+
+    ['doublesandwich','crusteddoublesandwich',0.85], ['crusteddoublesandwich','doublesandwich',0.80],
+    ['doublesandwich','reversedoublesandwich',0.70], ['reversedoublesandwich','doublesandwich',0.70],
+
+    ['pairs','block',0.55], ['block','pairs',0.55],
+    ['triples','block',0.55], ['block','triples',0.55]
+  ];
+
+  function bestPerceptionMatchWeight(gTag){
+    if(rP.has(gTag)) return {w:1, via:gTag};
+    let bestW = 0, via = null;
+    for(const [a,b,w] of PER_PARTIAL){
+      if(a===gTag && rP.has(b) && w>bestW){ bestW=w; via=b; }
+    }
+    return {w:bestW, via};
+  }
+
+  // ---- perception scoring (AVERAGED) ----
+  let perWeights = [];
+  const perMatchList = [];
+  const perPartialList = [];
+  const perAntiList = [];
+
+  for(const g of gP){
+    const bm = bestPerceptionMatchWeight(g);
+    perWeights.push(bm.w);
+    if(bm.w === 1){
+      perMatchList.push(g);
+    }else if(bm.w > 0){
+      perPartialList.push(`${g}≈${bm.via} (${Math.round(bm.w*100)}%)`);
+    }else{
+      perAntiList.push(g);
+    }
+  }
+
+  const perAvg = perWeights.length ? (perWeights.reduce((a,b)=>a+b,0) / perWeights.length) : 0;
+  const perAntiAvg = perWeights.length ? (1 - perAvg) : 0;
+
+  // ---- eval scoring ----
+  const evalMatchList = [...rE].filter(t => gE.has(t));
   const evalMatch = evalMatchList.length;
-  const perAnti = perAntiList.length;
+  const evalAntiList = [...gE].filter(t => !rE.has(t));
   const evalAnti = evalAntiList.length;
 
-  // Preliminary weights (easy to tune later)
-  const wPerMatch = 3.0;
+  const wPer = 3.0;
   const wEvalMatch = 1.0;
-  const wPerAnti = 1.5;
   const wEvalAnti = 0.5;
 
-  const raw = (perMatch*wPerMatch) + (evalMatch*wEvalMatch) - (perAnti*wPerAnti) - (evalAnti*wEvalAnti);
+  const raw = (perAvg * wPer) + (evalMatch * wEvalMatch) - (perAntiAvg * wPer) - (evalAnti * wEvalAnti);
 
-  // Normalize to 0..10 relative to the available evidence in this generator.
-  const maxRaw = (gP.size*wPerMatch) + (gE.size*wEvalMatch);
-  const minRaw = -((gP.size*wPerAnti) + (gE.size*wEvalAnti));
+  const maxRaw = (1 * wPer) + (gE.size * wEvalMatch);
+  const minRaw = -((1 * wPer) + (gE.size * wEvalAnti));
   const denom = (maxRaw - minRaw) || 1;
 
   let score = ((raw - minRaw) / denom) * 10;
-  if(score < 0) score = 0;
-  if(score > 10) score = 10;
-
-  score = Math.round(score * 100) / 100;
+  score = Math.max(0, Math.min(10, Math.round(score*100)/100));
 
   return {
     score,
     breakdown:{
-      weights:{wPerMatch,wEvalMatch,wPerAnti,wEvalAnti},
-      counts:{perMatch, evalMatch, perAnti, evalAnti},
-      lists:{perMatch:perMatchList, evalMatch:evalMatchList, perAnti:perAntiList, evalAnti:evalAntiList},
-      raw,
-      minRaw,
-      maxRaw,
-      denom
+      perceptionAvg:Math.round(perAvg*100)/100,
+      perceptionAntiAvg:Math.round(perAntiAvg*100)/100,
+      evalMatch, evalAnti,
+      lists:{
+        perMatch:perMatchList,
+        perPartial:perPartialList,
+        perAnti:perAntiList,
+        evalMatch:evalMatchList,
+        evalAnti:evalAntiList
+      },
+      raw, minRaw, maxRaw, denom
     }
   };
 }
@@ -397,10 +439,10 @@ const VIRT_DIFFICULTY = {
   rightmirror: 6.2
 };
 
-function computeVirtuosityScore(genPer, genEval, respPer, respEval){
+function computeVirtuosityScore(genPer, genEval, respMovePer, respEval, respLen){
   const gP = new Set(genPer||[]);
   const gE = new Set(genEval||[]);
-  const rP = new Set(respPer||[]);
+  const rP = new Set(respMovePer||[]);
   const rE = new Set(respEval||[]);
 
   // Pick the most "difficult" detected response perception as the base.
@@ -423,6 +465,8 @@ function computeVirtuosityScore(genPer, genEval, respPer, respEval){
         baseTag:null,
         base:0,
         cleanliness:0,
+        length: (respLen ?? 0),
+        lengthMultiplier: 0,
         perAnti:0,
         evalAnti:0,
         notes:'no recognized response perception'
@@ -442,10 +486,22 @@ function computeVirtuosityScore(genPer, genEval, respPer, respEval){
   // - cap penalty so virtuosity never goes negative from divergence alone
   const cleanliness = Math.max(0.15, 1 - (0.12*perAnti) - (0.04*evalAnti));
 
-  let score = base * cleanliness;
+  // Length multiplier (tunable)
+  const n = Math.max(1, Number(respLen||0));
+  // baseline = 4. gentle growth, capped.
+  let lengthMultiplier = 0.85 + 0.15 * Math.sqrt(n / 4);
+  lengthMultiplier = Math.max(0.85, Math.min(1.35, lengthMultiplier));
+
+  // Don't allow length to "farm" virtuosity for chaotic variants.
+  if(baseTag && baseTag.startsWith('chaotic')){
+    lengthMultiplier = Math.min(lengthMultiplier, 1.05);
+  }
+
+  let score = base * cleanliness * lengthMultiplier;
 
   // Scale up to 0..10 range (base is ~0..6.2). Simple multiplier keeps tuning easy.
-  score = score * 1.6; // preliminary scaling
+  const scale = 1.6;
+  score = score * scale;
   if(score > 10) score = 10;
   if(score < 0) score = 0;
   score = Math.round(score * 100) / 100;
@@ -456,6 +512,9 @@ function computeVirtuosityScore(genPer, genEval, respPer, respEval){
       baseTag,
       base:Math.round(base*100)/100,
       cleanliness:Math.round(cleanliness*1000)/1000,
+      length:n,
+      lengthMultiplier:Math.round(lengthMultiplier*1000)/1000,
+      scale,
       perAnti,
       evalAnti,
       perAntiList,
@@ -536,10 +595,11 @@ function setInternalScoresDebug(elId, relationRes, virtuosityRes){
     const w = rb.weights;
     const c = rb.counts;
 
-    addLine(`calc: (${c.perMatch}×${w.wPerMatch}) + (${c.evalMatch}×${w.wEvalMatch}) − (${c.perAnti}×${w.wPerAnti}) − (${c.evalAnti}×${w.wEvalAnti}) = raw ${Math.round(rb.raw*100)/100}`);
+    addLine(`calc: (${c.perMatchSum}×${w.wPerMatch}) + (${c.evalMatch}×${w.wEvalMatch}) − (${c.perAntiSum}×${w.wPerAnti}) − (${c.evalAnti}×${w.wEvalAnti}) = raw ${Math.round(rb.raw*100)/100}`);
     addLine(`norm: min ${Math.round(rb.minRaw*100)/100}, max ${Math.round(rb.maxRaw*100)/100} → score = (raw−min)/(max−min)×10`);
 
     addLine(`per match: ${rb.lists.perMatch.join(', ') || '—'}`);
+    addLine(`per partial: ${rb.lists.perPartial.join(', ') || '—'}`);
     addLine(`eval match: ${rb.lists.evalMatch.join(', ') || '—'}`);
     addLine(`per anti: ${rb.lists.perAnti.join(', ') || '—'}`);
     addLine(`eval anti: ${rb.lists.evalAnti.join(', ') || '—'}`);
@@ -555,9 +615,10 @@ function setInternalScoresDebug(elId, relationRes, virtuosityRes){
     if(vb.notes) addLine(`note: ${vb.notes}`);
     if(vb.baseTag){
       addLine(`cleanliness: max(0.15, 1 − 0.12×perAnti − 0.04×evalAnti) = ${vb.cleanliness}`);
+      addLine(`length: 0.85 + 0.15×sqrt(n/4), clamped 0.85..1.35 (chaotic capped at 1.05) → n=${vb.length}, ×${vb.lengthMultiplier}`);
       addLine(`per anti: ${vb.perAnti} (${(vb.perAntiList||[]).join(', ') || '—'})`);
       addLine(`eval anti: ${vb.evalAnti} (${(vb.evalAntiList||[]).join(', ') || '—'})`);
-      addLine(`score: (base×cleanliness)×1.6, clamped to 0..10`);
+      addLine(`score: (base×cleanliness×lengthMult)×${vb.scale}, clamped to 0..10`);
     }
   }
 
@@ -1619,7 +1680,7 @@ function respond(type){
 
   // Relation score (internal)
   const relationRes = computeRelationScore(currentGenPerception, currentGenEvalKeys, rPer, rEval);
-  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval);
+  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval, seq.length);
   window.__lastRelationScore = relationRes.score;
   window.__lastRelationBreakdown = relationRes.breakdown;
   window.__lastVirtuosityScore = virtuosityRes.score;
@@ -1651,7 +1712,7 @@ function submitManual(){
 
   // Relation score (internal)
   const relationRes = computeRelationScore(currentGenPerception, currentGenEvalKeys, rPer, rEval);
-  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval);
+  const virtuosityRes = computeVirtuosityScore(currentGenPerception, currentGenEvalKeys, inferred, rEval, seq.length);
   window.__lastManualRelationScore = relationRes.score;
   window.__lastManualRelationBreakdown = relationRes.breakdown;
   window.__lastManualVirtuosityScore = virtuosityRes.score;
